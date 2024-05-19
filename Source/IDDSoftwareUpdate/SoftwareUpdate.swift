@@ -312,10 +312,10 @@ struct SoftwareUpdate {
                     actions: {
                         ButtonState.doNotAskAgain()
                         ButtonState(action: .installAndRelaunch) {
-                            TextState(.okButtonTitle)
+                            TextState("OK")
                         }
                         ButtonState(role: .cancel) {
-                            TextState(.cancelButtonTitle)
+                            TextState("Cancel")
                         }
                     },
                     doNotShowAgainKey: "installAndRelaunch",

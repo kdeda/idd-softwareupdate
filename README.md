@@ -1,5 +1,4 @@
-# IDDSWift
+# IDDSoftwareUpdate
 
-Cool extensions/additions to apple's Swift standard library.
-Feel free to use this code into your project.
+This provide an easy to use reducer to manage your software update outside apple store.
 
