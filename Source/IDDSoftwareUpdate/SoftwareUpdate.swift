@@ -34,18 +34,21 @@ import IDDAlert
  Run version 8.0.8 in command line with arguments
  /Applications/WhatSize.app/Contents/MacOS/WhatSize -standardLog true -WhatSize.softwareUpdateHost http://local.whatsizemac.com
  */
-struct SoftwareUpdate {
+public struct SoftwareUpdate {
     @ObservableState
-    struct State: Equatable {
-        var update: UpdateInfo = .empty
-        var downloadedByteCount = 0
-        var installStep: InstallStep = .none
-        var settings: Settings = Settings.lastSaved
+    public struct State: Equatable {
+        public var update: UpdateInfo = .empty
+        public var downloadedByteCount = 0
+        public var installStep: InstallStep = .none
+        public var settings: Settings = Settings.lastSaved
 
         @Presents var alert: DNSAlert<Action.Alert>.State?
+
+        public init() {
+        }
     }
 
-    enum Action: Equatable {
+    public enum Action: Equatable {
         case appDidStart
         case checkForUpdatesInBackgroundOnce
         case checkForUpdates
@@ -71,7 +74,7 @@ struct SoftwareUpdate {
 
         // delegate
         case delegate(Delegate)
-        enum Delegate: Equatable {
+        public enum Delegate: Equatable {
             case started
             case failedToFetchUpdate
             case cancelled
@@ -79,7 +82,7 @@ struct SoftwareUpdate {
         }
 
         case alert(PresentationAction<DNSAlert<Alert>.Action>)
-        enum Alert: Equatable {
+        public enum Alert: Equatable {
             case installAndRelaunch
         }
     }
@@ -92,7 +95,7 @@ struct SoftwareUpdate {
 
     @Dependency(\.softwareUpdateClient) var softwareUpdateClient
 
-    init() {
+    public init() {
     }
 
     /**

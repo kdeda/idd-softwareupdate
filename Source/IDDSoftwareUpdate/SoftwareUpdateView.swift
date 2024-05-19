@@ -12,7 +12,7 @@ import IDDSwiftUI
 import ComposableArchitecture
 import WebKit
 
-struct SoftwareUpdateView: View {
+public struct SoftwareUpdateView: View {
     @Perception.Bindable var store: StoreOf<SoftwareUpdate>
 
     fileprivate struct UpdatesView<Content>: View where Content: View {
@@ -225,7 +225,11 @@ struct SoftwareUpdateView: View {
         .frame(width: 320)
     }
 
-    var body: some View {
+    public init(store: StoreOf<SoftwareUpdate>) {
+        self.store = store
+    }
+    
+    public var body: some View {
         WithPerceptionTracking {
             VStack(spacing: 10) {
                 HStack(alignment: .top, spacing: 20) {

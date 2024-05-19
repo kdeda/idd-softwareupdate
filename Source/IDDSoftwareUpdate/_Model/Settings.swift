@@ -10,7 +10,7 @@ import Foundation
 import IDDSwift
 
 extension SoftwareUpdate {
-    struct Settings: Equatable, Codable {
+    public struct Settings: Equatable, Codable {
         public static var defaultItem = Settings()
         @UserDefaultsValue(.defaultItem, forKey: "CheckForUpdates.Settings.lastSaved")
         public static var lastSaved: Settings
@@ -28,16 +28,18 @@ extension SoftwareUpdate {
             return rv
         }()
 
-        var automatically: Bool = true
-        var updateInterval: UpdateInterval = .daily
-        var skipVersion: Int = 0
-
+        public var automatically: Bool = true
+        public var updateInterval: UpdateInterval = .daily
+        public var skipVersion: Int = 0
         /**
          Will contain the stamp of the last successfull check
          */
-        var lastCheckDate: Date = .distantPast
+        public var lastCheckDate: Date = .distantPast
 
-        var lastCheckString: String {
+        public init() {
+        }
+
+        public var lastCheckString: String {
             lastCheckDate.stringWithDateFormatter(Self.dateFormatter)
         }
 
@@ -51,7 +53,7 @@ extension SoftwareUpdate {
          defaults write com.id-design.v8.whatsize.plist CheckForUpdates.Settings.lastSaved.json -string '{"skipVersion" : 8100, "automatically" : true,  "updateInterval" : "daily",  "lastCheckDate" : "2024-05-16T16:10:50Z"}'
          defaults write com.id-design.v8.whatsize.plist CheckForUpdates.Settings.lastSaved.json -string '{"skipVersion" : 8100, "automatically" : true,  "updateInterval" : "weekly",  "lastCheckDate" : "2024-05-16T16:10:50Z"}'
          */
-        var nextCheckDate: Date {
+        public var nextCheckDate: Date {
             guard lastCheckDate != .distantPast
             else { return Date() }
 
@@ -73,7 +75,7 @@ extension SoftwareUpdate {
         /**
          Basically if the nextCheckDate falls in the past do check please as soon as possible.
          */
-        var shouldCheckForUpdates: Bool {
+        public var shouldCheckForUpdates: Bool {
             Int(nextCheckDate.timeIntervalSinceNow) <= 0
         }
 

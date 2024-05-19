@@ -8,16 +8,16 @@
 
 import Foundation
 
-enum UpdateInterval: String, CaseIterable, Equatable, Hashable, Identifiable, Codable {
+public enum UpdateInterval: String, CaseIterable, Equatable, Hashable, Identifiable, Codable {
     case daily
     case weekly
     case monthly
 
-    var id: String {
+    public var id: String {
         self.rawValue
     }
 
-    var name: String {
+    public var name: String {
         switch self {
         case .daily:   "Daily"
         case .weekly:  "Weekly"

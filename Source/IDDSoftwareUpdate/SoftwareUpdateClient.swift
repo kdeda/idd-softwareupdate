@@ -32,6 +32,18 @@ public struct SoftwareUpdateClient {
     public var checkForUpdates: @Sendable () async -> UpdateInfo?
     public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>
     public var installUpgrade: @Sendable (_ pkgFilePath: String, _ applicationPath: String) async -> Void
+
+    public init(
+        websiteURL: @escaping () -> URL,
+        checkForUpdates: @escaping @Sendable () async -> UpdateInfo?,
+        downloadUpdate: @escaping @Sendable (_: UpdateInfo) throws -> AsyncStream<Int>,
+        installUpgrade: @escaping @Sendable (_: String, _: String) async -> Void
+    ) {
+        self.websiteURL = websiteURL
+        self.checkForUpdates = checkForUpdates
+        self.downloadUpdate = downloadUpdate
+        self.installUpgrade = installUpgrade
+    }
 }
 
 extension DependencyValues {
