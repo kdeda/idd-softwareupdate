@@ -31,6 +31,7 @@ public struct SoftwareUpdateClient {
     public var websiteURL: () -> URL
     public var checkForUpdates: @Sendable () async -> UpdateInfo?
     public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>
+    public var installUpgrade: @Sendable (_ pkgFilePath: String, _ applicationPath: String) async -> Void
 }
 
 extension DependencyValues {
@@ -135,6 +136,9 @@ extension SoftwareUpdateClient: DependencyKey {
                         task.cancel()
                     }
                 }
+            },
+            installUpgrade: { pkgFilePath, applicationPath in
+                Log4swift[Self.self].error(function: "installUpgrade", "NOOP, please plguin the proper imp for this")
             }
         )
     }()
@@ -168,6 +172,9 @@ extension SoftwareUpdateClient: DependencyKey {
                         task.cancel()
                     }
                 }
+            },
+            installUpgrade: { pkgFilePath, applicationPath in
+                Log4swift[Self.self].error(function: "installUpgrade", "NOOP, please plguin the proper imp for this")
             }
         )
     }()
@@ -177,6 +184,7 @@ extension SoftwareUpdateClient: TestDependencyKey {
     public static let testValue = Self(
         websiteURL: XCTUnimplemented("\(Self.self).websiteURL"),
         checkForUpdates: XCTUnimplemented("\(Self.self).checkForUpdates"),
-        downloadUpdate: XCTUnimplemented("\(Self.self).downloadUpdate")
+        downloadUpdate: XCTUnimplemented("\(Self.self).downloadUpdate"),
+        installUpgrade: XCTUnimplemented("\(Self.self).installUpgrade")
     )
 }

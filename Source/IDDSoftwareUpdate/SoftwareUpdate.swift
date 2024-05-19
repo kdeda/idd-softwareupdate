@@ -1,5 +1,5 @@
 //
-//  CheckForUpdates.swift
+//  SoftwareUpdate.swift
 //  IDDSoftwareUpdate
 //
 //  Created by Klajd Deda on 4/3/24.
@@ -34,18 +34,7 @@ import IDDAlert
  Run version 8.0.8 in command line with arguments
  /Applications/WhatSize.app/Contents/MacOS/WhatSize -standardLog true -WhatSize.softwareUpdateHost http://local.whatsizemac.com
  */
-struct CheckForUpdates {
-    enum InstallStep: Equatable {
-        case none
-        case checkForUpdates
-        case displayNewVersion
-        case downloadUpdate
-        case installAndRelaunch
-        case installUpgradeCompleted
-        case settings
-        case uptoDate
-    }
-
+struct SoftwareUpdate {
     @ObservableState
     struct State: Equatable {
         var update: UpdateInfo = .empty
@@ -125,9 +114,9 @@ struct CheckForUpdates {
             try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * UInt64(50))
             await NSApp.hide(nil)
             
-            await WhatSizeHelperProxy.shared.installUpgrade(
-                pkgFilePath: UpdateInfo.installUpdateDebug ? "/Users/kdeda/Desktop/Packages/WhatSize_8.1.0/WhatSize.pkg" : pkgFilePath,
-                applicationPath: applicationPath
+            await softwareUpdateClient.installUpgrade(
+                UpdateInfo.installUpdateDebug ? URL.home.appendingPathComponent("Desktop/Packages/WhatSize_8.1.0/WhatSize.pkg").path : pkgFilePath,
+                applicationPath
             )
         }
     }
@@ -173,7 +162,7 @@ struct CheckForUpdates {
 
             case .checkForUpdates:
                 state.installStep = .checkForUpdates
-                
+
                 if UpdateInfo.installUpdateDebug {
                     // quick debuging
                     state.installStep = .installAndRelaunch
@@ -262,7 +251,7 @@ struct CheckForUpdates {
                 Log4swift[Self.self].info(".downloadUpdate creating: '\(update.downloadRootURL.path)'")
                 state.installStep = .downloadUpdate
                 state.downloadedByteCount = 0
-                
+
                 return .run { send in
                     do {
                         for await byteCount in try softwareUpdateClient.downloadUpdate(update) {

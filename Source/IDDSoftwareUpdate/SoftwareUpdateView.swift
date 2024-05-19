@@ -1,5 +1,5 @@
 //
-//  CheckForUpdatesView.swift
+//  SoftwareUpdateView.swift
 //  IDDSoftwareUpdate
 //
 //  Created by Klajd Deda on 4/3/24.
@@ -12,8 +12,8 @@ import IDDSwiftUI
 import ComposableArchitecture
 import WebKit
 
-struct CheckForUpdatesView: View {
-    @Perception.Bindable var store: StoreOf<CheckForUpdates>
+struct SoftwareUpdateView: View {
+    @Perception.Bindable var store: StoreOf<SoftwareUpdate>
 
     fileprivate struct UpdatesView<Content>: View where Content: View {
         var title: String
@@ -288,8 +288,8 @@ struct CheckForUpdatesView: View {
     }
 }
 
-fileprivate func store() -> StoreOf<CheckForUpdates> {
-    var state = CheckForUpdates.State()
+fileprivate func store() -> StoreOf<SoftwareUpdate> {
+    var state = SoftwareUpdate.State()
 
     state.installStep = .displayNewVersion
     state.installStep = .downloadUpdate
@@ -301,16 +301,16 @@ fileprivate func store() -> StoreOf<CheckForUpdates> {
 
     return Store(
         initialState: state,
-        reducer: CheckForUpdates.init
+        reducer: SoftwareUpdate.init
     )
 }
 
-#Preview("CheckForUpdatesView - Light") {
-    CheckForUpdatesView(store: store())
+#Preview("SoftwareUpdateView - Light") {
+    SoftwareUpdateView(store: store())
         .preferredColorScheme(.light)
 }
 
-#Preview("CheckForUpdatesView - Dark") {
-    CheckForUpdatesView(store: store())
+#Preview("SoftwareUpdateView - Dark") {
+    SoftwareUpdateView(store: store())
         .preferredColorScheme(.dark)
 }
