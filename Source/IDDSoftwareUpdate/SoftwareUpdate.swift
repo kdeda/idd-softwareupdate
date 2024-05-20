@@ -197,25 +197,28 @@ public struct SoftwareUpdate {
                 }
 
             case let .checkForUpdatesDidEnd(update, isBackground):
-                Log4swift[Self.self].info(".checkForUpdatesDidEnd buildNumber: '\(update.buildNumber)', shortVersion: '\(update.shortVersion)', appVersion: '\(Bundle.main.appVersion.shortVersion)', datePublished: '\(update.datePublished)', downloadByteCount: '\(update.downloadByteCount.decimalFormatted)', isBackground: '\(isBackground ? "yuup" : "noop")'")
+#if DEBUG
+                let buildNumber = Bundle.main.appVersion.buildNumber - 1 // will always find a new version
+#else
+                let buildNumber = Bundle.main.appVersion.buildNumber
+#endif
+                Log4swift[Self.self].info(".checkForUpdatesDidEnd update: '\(update.buildNumber)','\(update.shortVersion)', app: '\(buildNumber)','\(Bundle.main.appVersion.shortVersion)', datePublished: '\(update.datePublished)', downloadByteCount: '\(update.downloadByteCount.decimalFormatted)', isBackground: '\(isBackground ? "yuup" : "noop")'")
 
                 state.update = update
                 state.settings.lastCheckDate = Date()
                 Settings.lastSaved = state.settings
-#if DEBUG
-                let buildNumber = Bundle.main.appVersion.buildNumber
-#else
-                let buildNumber = Bundle.main.appVersion.buildNumber
-#endif
 
+                // background updates
+                // be quiet unless a new update is found
                 if isBackground {
-                    // we are comming from a background fetch
-                    // be quiet unless a new update is found
                     if update.buildNumber > buildNumber {
-                        // onto the next step
-                        // become visible
-                        state.installStep = .displayNewVersion
-                        return .send(.delegate(.started))
+                        Log4swift[Self.self].info(".checkForUpdatesDidEnd isBackground: '\(isBackground)', found update: '\(update.buildNumber)', greater than: '\(buildNumber)'")
+                        if state.settings.skipVersion >= update.buildNumber  {
+                            Log4swift[Self.self].info(".checkForUpdatesDidEnd skipVersion: '\(state.settings.skipVersion)'")
+                        } else {
+                            state.installStep = .displayNewVersion // onto the next step
+                            return .send(.delegate(.started)) // become visible
+                        }
                     }
 
                     // schedule the new fetch
@@ -224,9 +227,8 @@ public struct SoftwareUpdate {
 
                 // user initiated
                 if update.buildNumber > buildNumber {
-                    // onto the next step
+                    state.installStep = .displayNewVersion // onto the next step
                     // we should already be visible
-                    state.installStep = .displayNewVersion
                     return .none
                 }
 

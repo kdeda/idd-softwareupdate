@@ -52,7 +52,7 @@ public struct UpdateInfo: Equatable, Codable {
         )
         return rv
     }()
-    static let jsonEncoder: JSONEncoder = {
+    public static let jsonEncoder: JSONEncoder = {
         let rv = JSONEncoder()
 
         rv.dateEncodingStrategy = .formatted(Date.defaultFormatter)
@@ -96,6 +96,25 @@ public struct UpdateInfo: Equatable, Codable {
     public var releaseNotesURL: URL
     public let shortVersion: String
     public var signature: String
+
+    public init(buildNumber: Int,
+         datePublished: Date,
+         downloadByteCount: Int,
+         downloadSHA256: String,
+         downloadURL: URL,
+         releaseNotesURL: URL,
+         shortVersion: String,
+         signature: String
+    ) {
+        self.buildNumber = buildNumber
+        self.datePublished = datePublished
+        self.downloadByteCount = downloadByteCount
+        self.downloadSHA256 = downloadSHA256
+        self.downloadURL = downloadURL
+        self.releaseNotesURL = releaseNotesURL
+        self.shortVersion = shortVersion
+        self.signature = signature
+    }
 
     public var datePublishedString: String {
         Self.localDateFormatter.string(from: datePublished)
