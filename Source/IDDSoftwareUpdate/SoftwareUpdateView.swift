@@ -113,6 +113,7 @@ public struct SoftwareUpdateView: View {
                     Text("Install and Relaunch")
                         .padding(.horizontal, 6)
                 }
+                .help("Will install the update and relaunch this application.")
                 .keyboardShortcut(.defaultAction)
             }
         }
@@ -265,10 +266,12 @@ public struct SoftwareUpdateView: View {
                             Text("Remind Me Later")
                                 .padding(.horizontal, 6)
                         }
+                        .help("Will postpone checking for new week.")
                         Button(action: { store.send(.downloadUpdate) }) {
                             Text("Install Update")
                                 .padding(.horizontal, 6)
                         }
+                        .help("Will download the update.")
                         .keyboardShortcut(.defaultAction)
                     }
                     .padding(.leading, 84) // this is the space taken by the appIcon
@@ -295,13 +298,13 @@ public struct SoftwareUpdateView: View {
 fileprivate func store() -> StoreOf<SoftwareUpdate> {
     var state = SoftwareUpdate.State()
 
-    state.installStep = .displayNewVersion
     state.installStep = .downloadUpdate
     state.installStep = .installAndRelaunch
     state.installStep = .installUpgradeCompleted
     state.installStep = .checkForUpdates
     state.installStep = .uptoDate
     state.installStep = .settings
+    state.installStep = .displayNewVersion
 
     return Store(
         initialState: state,

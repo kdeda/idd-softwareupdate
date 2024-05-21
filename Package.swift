@@ -15,7 +15,8 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/kdeda/idd-alert.git", "1.0.5" ..< "2.0.0"),
+        .package(url: "https://github.com/kdeda/idd-alert.git", "1.0.6" ..< "2.0.0"),
+        // .package(path: "../idd-alert"),
         .package(url: "https://github.com/kdeda/idd-swiftui.git", "2.1.3" ..< "3.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.10.4")
     ],
@@ -31,10 +32,11 @@ let package = Package(
         .testTarget(
             name: "IDDSoftwareUpdateTests",
             dependencies: [
-                "IDDSoftwareUpdate",
-                .product(name: "IDDAlert", package: "idd-alert"),
-                .product(name: "IDDSwiftUI", package: "idd-swiftui"),
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
+                "IDDSoftwareUpdate"
+//                ,
+//                .product(name: "IDDAlert", package: "idd-alert"),
+//                .product(name: "IDDSwiftUI", package: "idd-swiftui"),
+//                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
             ]
         )
     ]

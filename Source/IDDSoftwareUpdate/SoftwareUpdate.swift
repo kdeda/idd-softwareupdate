@@ -74,6 +74,7 @@ public struct SoftwareUpdate {
 
         // delegate
         case delegate(Delegate)
+        @CasePathable
         public enum Delegate: Equatable {
             case started
             case failedToFetchUpdate
@@ -93,6 +94,7 @@ public struct SoftwareUpdate {
         case downloadUpdate
     }
 
+    @Dependency(\.continuousClock) var clock
     @Dependency(\.softwareUpdateClient) var softwareUpdateClient
 
     public init() {
@@ -106,20 +108,17 @@ public struct SoftwareUpdate {
      /Applications/WhatSize.app/Contents/MacOS/WhatSize -standardLog true -installUpgradeCompleted /Users/kdeda/Desktop/Packages/WhatSize_8.1.0/com.id-design.v8.whatsizehelper
      */
     fileprivate func installAndRelaunch(_ state: State) -> Effect<Action> {
-        /// /Applications/WhatSize.app
-        let applicationPath = Bundle.main.bundlePath
-        /// A path to a temporary folder that should contain the WhatSize.pkg and the UpdateInfo.json we are applying
+        /// A path to a temporary folder that should contain your WhatSize.pkg and the UpdateInfo.json we are applying
         let pkgFilePath = state.update.downloadPKGURL.path
 
         return .run { send in
             await send(.delegate(.completed))
             // hang on a tinny bit
-            try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * UInt64(50))
+            try await clock.sleep(for: .milliseconds(50))
             await NSApp.hide(nil)
             
             await softwareUpdateClient.installUpgrade(
-                UpdateInfo.installUpdateDebug ? URL.home.appendingPathComponent("Desktop/Packages/WhatSize_8.1.0/WhatSize.pkg").path : pkgFilePath,
-                applicationPath
+                UpdateInfo.installUpdateDebug ? URL.home.appendingPathComponent("Desktop/Packages/WhatSize_8.1.0/WhatSize.pkg").path : pkgFilePath
             )
         }
     }
@@ -158,7 +157,7 @@ public struct SoftwareUpdate {
                         // we will re-try in a bit
                         Log4swift[Self.self].error(".checkForUpdatesInBackgroundOnce handle failure to fetch: 'NOOP'")
                     }
-                    try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * UInt64(1000 * frequency)) // sleep for a bit and retry
+                    try await clock.sleep(for: .seconds(frequency)) // sleep for a bit and retry
                     await send(.checkForUpdatesInBackgroundOnce)
                 }
                 .cancellable(id: CancelID.checkForUpdatesInBackgroundOnce, cancelInFlight: true)
@@ -173,7 +172,7 @@ public struct SoftwareUpdate {
                     return .run { send in
                         Task.cancel(id: CancelID.checkForUpdatesInBackgroundOnce)
                         await send(.delegate(.started))
-                        try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * UInt64(1250))
+                        try await clock.sleep(for: .milliseconds(1250))
                         await send(.installAndRelaunch)
                     }
                 }
@@ -185,7 +184,7 @@ public struct SoftwareUpdate {
                         await send(.checkForUpdatesDidEnd(update, false))
                         return
                     }
-                    try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * 250)
+                    try await clock.sleep(for: .milliseconds(250))
                     await send(.delegate(.failedToFetchUpdate))
                 }
                 .cancellable(id: CancelID.checkingForUpdates, cancelInFlight: true)
@@ -197,12 +196,10 @@ public struct SoftwareUpdate {
                 }
 
             case let .checkForUpdatesDidEnd(update, isBackground):
-#if DEBUG
-                let buildNumber = Bundle.main.appVersion.buildNumber - 1 // will always find a new version
-#else
-                let buildNumber = Bundle.main.appVersion.buildNumber
-#endif
-                Log4swift[Self.self].info(".checkForUpdatesDidEnd update: '\(update.buildNumber)','\(update.shortVersion)', app: '\(buildNumber)','\(Bundle.main.appVersion.shortVersion)', datePublished: '\(update.datePublished)', downloadByteCount: '\(update.downloadByteCount.decimalFormatted)', isBackground: '\(isBackground ? "yuup" : "noop")'")
+                let buildNumber = softwareUpdateClient.appBuildNumber()
+                let shortVersion = softwareUpdateClient.appShortVersion()
+
+                Log4swift[Self.self].info(".checkForUpdatesDidEnd update: '\(update.buildNumber)','\(update.shortVersion)', app: '\(buildNumber)','\(shortVersion)', datePublished: '\(update.datePublished)', downloadByteCount: '\(update.downloadByteCount.decimalFormatted)', isBackground: '\(isBackground ? "yuup" : "noop")'")
 
                 state.update = update
                 state.settings.lastCheckDate = Date()
@@ -262,7 +259,7 @@ public struct SoftwareUpdate {
                         for await byteCount in try softwareUpdateClient.downloadUpdate(update) {
                             await send(.downloading(byteCount))
                         }
-                        try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * 250) // let it breathe a bit
+                        try await clock.sleep(for: .milliseconds(250)) // let it breathe a bit
                         if !update.downloadPKGURL.fileExist {
                             Log4swift[Self.self].error(".downloadUpdate: failed to create: '\(update.downloadPKGURL.path)'")
                             await send(.delegate(.completed))

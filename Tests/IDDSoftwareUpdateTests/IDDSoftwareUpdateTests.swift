@@ -1,140 +1,139 @@
-import XCTest
+//
+//  IDDSoftwareUpdateTests.swift
+//  IDDFolderScan
+//
+//  Created by Klajd Deda on 01/05/23.
+//  Copyright (C) 1997-2024 id-design, inc. All rights reserved.
+//
+
+import ComposableArchitecture
 import Log4swift
 import Logging
 import IDDSwift
-// @testable import IDDSwiftTests
+import XCTest
+
+@testable import IDDSoftwareUpdate
 
 final class IDDSoftwareUpdateTests: XCTestCase {
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-//        XCTAssertEqual(IDDCommons().text, "Hello, World!")
+    let clock = TestClock()
+    let state: SoftwareUpdate.State = {
+        var state = SoftwareUpdate.State()
+
+        state.settings = .defaultItem
+        return state
+    }()
+
+    override static  func setUp() {
+        super.setUp()
+
+        // add -standardLog true to the arguments for the target, IDDSoftwareUpdateTests
+        //
+        Log4swift.configure(appName: "IDDSoftwareUpdateTests")
+        Log4swift[Self.self].info("\(String(repeating: "-", count: Bundle.main.appVersion.shortDescription.count))")
+        Log4swift[Self.self].info("\(Bundle.main.appVersion.shortDescription)")
     }
 
-    static var allTests = [
-        ("testExample", testExample),
-    ]
-    
-    override func setUp() async throws {
-        LoggingSystem.bootstrap { label in
-            ConsoleHandler(label: label)
-        }
-    }
-    
     /**
-     Create the file where the asyncOutput will go
-     touch /tmp/asyncOutput.log
-     you can tail it
-     tail -f /tmp/asyncOutput.log
-
-     Create the test file
-     touch /tmp/test.log
-     append to it
-     echo "`date` 123 this is cool" >> /tmp/test.log^C
-     echo "`date +"%Y-%m-%d %H:%M:%S"` magical shrums" >> /tmp/test.log
-     echo "`date +"%Y-%m-%d %H:%M:%S"` magical shrums `uuidgen`" >> /tmp/test.log
+     Emulate failing to fetch update
      */
-    func testAsyncOutput() async {
-        let logFile = URL(fileURLWithPath: "/tmp/asyncOutput.log")
-        let process = Process(URL(fileURLWithPath: "/usr/bin/tail"), [
-            "-f",
-            "/tmp/test.log"
-        ])
-        // let process = Process(URL(fileURLWithPath: "/usr/bin/grep"), [
-        //     "Magical Shrums",
-        //     "/tmp/test.log"
-        // ])
-        
-        Log4swift[Self.self].info("-----")
-        Log4swift[Self.self].info("Starting ...")
-        guard let fileHandle = try? FileHandle(forWritingTo: logFile)
-        else {
-            // make sure the file is there and available for writing
-            XCTFail("Failed to create write handle on: '\(logFile.path)'", file: #file, line: #line)
-            return
-        }
-        
-        for await output in process.asyncOutput(timeOut: 60) {
-            switch output {
-            case let .error(error):
-                Log4swift[Self.self].error("output: \(error)")
-                
-            case let .terminated(reason):
-                Log4swift[Self.self].info("-----")
-                switch reason {
-                case .exit:
-                    Log4swift[Self.self].info("terminated: 'exit \(reason.rawValue)' usually a normal process termination")
-                case .uncaughtSignal:
-                    Log4swift[Self.self].info("terminated: 'uncaughtSignal \(reason.rawValue)' most likely the process got killed")
-                @unknown default:
-                    Log4swift[Self.self].info("terminated: 'unknown \(reason.rawValue)'")
-                }
-                Log4swift[Self.self].info("-----")
-
-            case let .stdout(data):
-                try? fileHandle.write(contentsOf: data)
-                
-                let message = String(data: data, encoding: .utf8) ?? ""
-                fputs(message, stdout)
-                
-            case let .stderr(data):
-                try? fileHandle.write(contentsOf: data)
-
-                let message = String(data: data, encoding: .utf8) ?? ""
-                fputs(message, stdout)
+    @MainActor
+    func test_failedToFetchUpdate() async {
+        let store = TestStore(initialState: state) {
+            SoftwareUpdate()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.softwareUpdateClient.websiteURL = {
+                URL(string: "https://test.whatsizemac.com")!
+            }
+            $0.softwareUpdateClient.checkForUpdates = {
+                .none
             }
         }
-        Log4swift[Self.self].info("Terminated")
-        Log4swift[Self.self].info("-----")
+
+        store.exhaustivity = .off
+
+        Log4swift[Self.self].info("Starting")
+        await store.send(.checkForUpdates)
+        await clock.advance(by: .seconds(1)) // more than what we were sleeping over on the action side
+        await store.receive(\.delegate.failedToFetchUpdate)
+        Log4swift[Self.self].info("Completed")
     }
 
     /**
-     Create a shell script
-     touch /tmp/tmutil
-     chmod +x /tmp/tmutil
-     with these contents
-     #!/bin/sh
-     #
-     #
-
-     echo "Test 123, Test 123, Test 123"
-     sleep 4
-     exit 0
+     Emulate obtaining an update item that is older or equal to the version we have.
      */
-    func testProcessFetchString() async {
-        // we want to log
-        UserDefaults.standard.setValue("D", forKey: "IDDSwift.Process")
-
-        let tmutilURL = URL(fileURLWithPath: "/usr/bin/tmutil")
-        // let tmutilURL = URL(fileURLWithPath: "/tmp/tmutil")
-
-        //  /usr/bin/tmutil listbackups
-        //  /usr/bin/tmutil machinedirectory
-        //  /usr/bin/tmutil destinationinfo -X
-        //  /usr/bin/tmutil uniquesize /Volumes/Vault/Backups.backupdb/macpro3000/2015-06-09-113054/Yosemite\ XP941/Users/kdeda/
-
-        do {
-            let processData = try Process.processData(taskURL: tmutilURL, arguments: ["machinedirectory"], timeOut: 3.0)
-
-            Log4swift[Self.self].info("processData.stdout: '\(processData.stdOutString)'")
-            Log4swift[Self.self].info("processData.stderr: '\(processData.stdErrorString)'")
-        } catch {
-            Log4swift[Self.self].info("processError.error: '\(error)'")
+    @MainActor
+    func test_uptoDate() async {
+        let store = TestStore(initialState: state) {
+            SoftwareUpdate()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.softwareUpdateClient.websiteURL = {
+                URL(string: "https://test.whatsizemac.com")!
+            }
+            $0.softwareUpdateClient.appBuildNumber = {
+                8100
+            }
+            $0.softwareUpdateClient.appShortVersion = {
+                "8.1.0"
+            }
+            $0.softwareUpdateClient.checkForUpdates = {
+                UpdateInfo.empty
+            }
         }
 
-        XCTAssert(true, "Failed to create write handle on")
+        store.exhaustivity = .off
+
+        Log4swift[Self.self].info("Starting")
+        await store.send(.checkForUpdates)
+        await clock.advance()
+        await store.receive(\.checkForUpdatesDidEnd) { newState in
+            newState.installStep = .uptoDate
+        }
         Log4swift[Self.self].info("Completed")
-        Log4swift[Self.self].info("-----")
     }
 
-    func testSH256() async {
-        let url = URL(fileURLWithPath: "/Users/kdeda/Desktop/Packages/WhatSize_8.0.8/WhatSize.tgz")
-        let sha256 = url.sha256
+    /**
+     Emulate obtaining an update item that is more recent to the version we have.
+     */
+    @MainActor
+    func test_displayNewVersion() async {
+        let store = TestStore(initialState: state) {
+            SoftwareUpdate()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.softwareUpdateClient.websiteURL = {
+                URL(string: "https://test.whatsizemac.com")!
+            }
+            $0.softwareUpdateClient.appBuildNumber = {
+                8090
+            }
+            $0.softwareUpdateClient.appShortVersion = {
+                "8.0.9"
+            }
+            $0.softwareUpdateClient.checkForUpdates = {
+                let rv = UpdateInfo(
+                    buildNumber: 8100,
+                    datePublished: Date().date(shiftedByDays: -1),
+                    downloadByteCount: 19582879,
+                    downloadSHA256: "",
+                    downloadURL: URL(string: "https://test.whatsizemac.com")!.appendingPathComponent("software/whatsize8/whatsize_8.1.0.pkg"),
+                    releaseNotesURL: URL(string: "https://test.whatsizemac.com")!.appendingPathComponent("software/whatsize8/release/notes.html"),
+                    shortVersion: "8.1.0",
+                    signature: "")
+                return rv
+            }
+        }
 
-        XCTAssertEqual(sha256, "DADF281E1F4141B5-5A23014632-9522057CE976-F3F5B9D2D369-68B0AF513EC086")
+        store.exhaustivity = .off
+
+        Log4swift[Self.self].info("Starting")
+        await store.send(.checkForUpdates)
+        await clock.advance()
+        await store.receive(\.checkForUpdatesDidEnd) { newState in
+            newState.installStep = .displayNewVersion
+        }
         Log4swift[Self.self].info("Completed")
-        Log4swift[Self.self].info("-----")
     }
 
 }

@@ -29,17 +29,23 @@ enum DownloadUpdateError: LocalizedError, Equatable {
  */
 public struct SoftwareUpdateClient {
     public var websiteURL: () -> URL
+    public var appBuildNumber: () -> Int
+    public var appShortVersion: () -> String
     public var checkForUpdates: @Sendable () async -> UpdateInfo?
     public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>
-    public var installUpgrade: @Sendable (_ pkgFilePath: String, _ applicationPath: String) async -> Void
+    public var installUpgrade: @Sendable (_ pkgFilePath: String) async -> Void
 
     public init(
         websiteURL: @escaping () -> URL,
+        appBuildNumber: @escaping () -> Int,
+        appShortVersion: @escaping () -> String,
         checkForUpdates: @escaping @Sendable () async -> UpdateInfo?,
         downloadUpdate: @escaping @Sendable (_: UpdateInfo) throws -> AsyncStream<Int>,
-        installUpgrade: @escaping @Sendable (_: String, _: String) async -> Void
+        installUpgrade: @escaping @Sendable (_: String) async -> Void
     ) {
         self.websiteURL = websiteURL
+        self.appBuildNumber = appBuildNumber
+        self.appShortVersion = appShortVersion
         self.checkForUpdates = checkForUpdates
         self.downloadUpdate = downloadUpdate
         self.installUpgrade = installUpgrade
@@ -55,6 +61,8 @@ extension DependencyValues {
 
 extension SoftwareUpdateClient: DependencyKey {
     public static let liveValue: Self = {
+        @Dependency(\.continuousClock) var clock
+
         return Self(
             websiteURL: {
                 guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
@@ -63,9 +71,20 @@ extension SoftwareUpdateClient: DependencyKey {
 
                 return hostURL
             },
+            appBuildNumber: {
+#if DEBUG
+                let buildNumber = Bundle.main.appVersion.buildNumber - 1 // will always find a new version
+#else
+                let buildNumber = Bundle.main.appVersion.buildNumber
+#endif
+                return buildNumber
+            },
+            appShortVersion: {
+                Bundle.main.appVersion.shortVersion
+            },
             checkForUpdates: {
                 // DEDA DEBUG
-                try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * 500)
+                try? await clock.sleep(for: .milliseconds(500))
 
                 let updateURL = UpdateInfo.hostURL.appendingPathComponent("software/whatsize8/release/update.json")
                 var request = URLRequest(url: updateURL)
@@ -149,13 +168,15 @@ extension SoftwareUpdateClient: DependencyKey {
                     }
                 }
             },
-            installUpgrade: { pkgFilePath, applicationPath in
+            installUpgrade: { pkgFilePath in
                 Log4swift[Self.self].error(function: "installUpgrade", "NOOP, please plguin the proper imp for this")
             }
         )
     }()
 
     public static let previewValue: Self = {
+        @Dependency(\.continuousClock) var clock
+
         return Self(
             websiteURL: {
                 guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
@@ -163,6 +184,12 @@ extension SoftwareUpdateClient: DependencyKey {
                 else { return URL(string: "https://test.whatsizemac.com")! }
 
                 return hostURL
+            },
+            appBuildNumber: {
+                return 8090
+            },
+            appShortVersion: {
+                "8.0.9"
             },
             checkForUpdates: {
                 return .none
@@ -173,7 +200,7 @@ extension SoftwareUpdateClient: DependencyKey {
 
                     let task = Task.detached {
                         await (0 ..< 100).asyncForEach { _ in
-                            try? await Task.sleep(nanoseconds: NSEC_PER_MSEC * 250)
+                            try? await clock.sleep(for: .milliseconds(250))
                             continuation.yield(100)
                         }
                         continuation.finish()
@@ -185,7 +212,7 @@ extension SoftwareUpdateClient: DependencyKey {
                     }
                 }
             },
-            installUpgrade: { pkgFilePath, applicationPath in
+            installUpgrade: { pkgFilePath in
                 Log4swift[Self.self].error(function: "installUpgrade", "NOOP, please plguin the proper imp for this")
             }
         )
@@ -195,6 +222,8 @@ extension SoftwareUpdateClient: DependencyKey {
 extension SoftwareUpdateClient: TestDependencyKey {
     public static let testValue = Self(
         websiteURL: XCTUnimplemented("\(Self.self).websiteURL"),
+        appBuildNumber: XCTUnimplemented("\(Self.self).appBuildNumber"),
+        appShortVersion: XCTUnimplemented("\(Self.self).appShortVersion"),
         checkForUpdates: XCTUnimplemented("\(Self.self).checkForUpdates"),
         downloadUpdate: XCTUnimplemented("\(Self.self).downloadUpdate"),
         installUpgrade: XCTUnimplemented("\(Self.self).installUpgrade")
