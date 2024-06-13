@@ -10,7 +10,7 @@ import Foundation
 import IDDSwift
 
 extension SoftwareUpdate {
-    public struct Settings: Equatable, Codable {
+    public struct Settings: Equatable, Codable, Sendable {
         public static var defaultItem = Settings()
         @UserDefaultsValue(.defaultItem, forKey: "CheckForUpdates.Settings.lastSaved")
         public static var lastSaved: Settings

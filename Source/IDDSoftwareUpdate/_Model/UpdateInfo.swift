@@ -10,7 +10,7 @@ import Foundation
 import IDDSwiftUI
 import ComposableArchitecture
 
-public struct UpdateInfo: Equatable, Codable {
+public struct UpdateInfo: Equatable, Codable, Sendable {
     // this should match to ../git.id-design.com/installer_tools/xchelper/xchelper/WhatSize8/Project.json
     internal static let updateCipherPassword = "6FA668D8-9839-47F2-93E2-4F9A9D8E61CF"
     /**

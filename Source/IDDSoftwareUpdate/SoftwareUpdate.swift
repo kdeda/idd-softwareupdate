@@ -13,7 +13,6 @@ import IDDSwift
 import Log4swift
 import IDDAlert
 
-@Reducer
 /**
  Fast full test
  Build version 8.0.8
@@ -34,6 +33,7 @@ import IDDAlert
  Run version 8.0.8 in command line with arguments
  /Applications/WhatSize.app/Contents/MacOS/WhatSize -standardLog true -WhatSize.softwareUpdateHost http://local.whatsizemac.com
  */
+@Reducer
 public struct SoftwareUpdate {
     @ObservableState
     public struct State: Equatable {
@@ -48,7 +48,7 @@ public struct SoftwareUpdate {
         }
     }
 
-    public enum Action: Equatable {
+    public enum Action: Equatable, Sendable {
         case appDidStart
         case checkForUpdatesInBackgroundOnce
         case checkForUpdates
@@ -74,8 +74,7 @@ public struct SoftwareUpdate {
 
         // delegate
         case delegate(Delegate)
-        @CasePathable
-        public enum Delegate: Equatable {
+        public enum Delegate: Equatable, Sendable {
             case started
             case failedToFetchUpdate
             case cancelled
@@ -83,7 +82,7 @@ public struct SoftwareUpdate {
         }
 
         case alert(PresentationAction<DNSAlert<Alert>.Action>)
-        public enum Alert: Equatable {
+        public enum Alert: Equatable, Sendable {
             case installAndRelaunch
         }
     }

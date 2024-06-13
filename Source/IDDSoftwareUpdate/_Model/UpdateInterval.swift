@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum UpdateInterval: String, CaseIterable, Equatable, Hashable, Identifiable, Codable {
+public enum UpdateInterval: String, CaseIterable, Equatable, Hashable, Identifiable, Codable, Sendable {
     case daily
     case weekly
     case monthly

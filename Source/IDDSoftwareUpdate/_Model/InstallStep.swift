@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum InstallStep: Equatable {
+public enum InstallStep: Equatable, Sendable {
     case none
     case checkForUpdates
     case displayNewVersion
