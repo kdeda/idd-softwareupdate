@@ -311,7 +311,6 @@ public struct SoftwareUpdate {
                     title: { TextState("This will install version \(state.update.shortVersion)") },
                     message: { TextState("The new version of WhatSize should restart in a second or two.") },
                     actions: {
-                        ButtonState.doNotAskAgain()
                         ButtonState(action: .installAndRelaunch) {
                             TextState("OK")
                         }
