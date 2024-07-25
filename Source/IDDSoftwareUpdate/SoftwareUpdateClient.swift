@@ -29,16 +29,18 @@ enum DownloadUpdateError: LocalizedError, Equatable {
  */
 public struct SoftwareUpdateClient {
     public var websiteURL: () -> URL
-    public var appBuildNumber: () -> Int
+    public var appBuildNumber: (_ optionPressed: Bool) -> Int
     public var appShortVersion: () -> String
+    public var backgroundFrequency: (_ optionPressed: Bool) -> Int
     public var checkForUpdates: @Sendable () async -> UpdateInfo?
     public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>
     public var installUpgrade: @Sendable (_ pkgFilePath: String) async -> Void
 
     public init(
         websiteURL: @escaping () -> URL,
-        appBuildNumber: @escaping () -> Int,
+        appBuildNumber: @escaping (_ optionPressed: Bool) -> Int,
         appShortVersion: @escaping () -> String,
+        backgroundFrequency: @escaping (_ optionPressed: Bool) -> Int,
         checkForUpdates: @escaping @Sendable () async -> UpdateInfo?,
         downloadUpdate: @escaping @Sendable (_: UpdateInfo) throws -> AsyncStream<Int>,
         installUpgrade: @escaping @Sendable (_: String) async -> Void
@@ -46,6 +48,7 @@ public struct SoftwareUpdateClient {
         self.websiteURL = websiteURL
         self.appBuildNumber = appBuildNumber
         self.appShortVersion = appShortVersion
+        self.backgroundFrequency = backgroundFrequency
         self.checkForUpdates = checkForUpdates
         self.downloadUpdate = downloadUpdate
         self.installUpgrade = installUpgrade
@@ -61,6 +64,7 @@ extension DependencyValues {
 
 extension SoftwareUpdateClient: DependencyKey {
     public static let liveValue: Self = {
+        let appBuildNumber_ = ActorIsolated(Bundle.main.appVersion.buildNumber)
         @Dependency(\.continuousClock) var clock
 
         return Self(
@@ -71,16 +75,24 @@ extension SoftwareUpdateClient: DependencyKey {
 
                 return hostURL
             },
-            appBuildNumber: {
-#if DEBUG
-                let buildNumber = Bundle.main.appVersion.buildNumber - 1 // will always find a new version
-#else
-                let buildNumber = Bundle.main.appVersion.buildNumber
-#endif
+            appBuildNumber: { optionPressed in
+                var buildNumber = Bundle.main.appVersion.buildNumber
+
+                if optionPressed {
+                    buildNumber -= 1
+                }
                 return buildNumber
             },
             appShortVersion: {
                 Bundle.main.appVersion.shortVersion
+            },
+            backgroundFrequency: { optionPressed in
+                var frequency = 60 * 60 // in seconds
+                
+                if optionPressed {
+                    frequency = 5
+                }
+                return frequency
             },
             checkForUpdates: {
                 // DEDA DEBUG
@@ -185,11 +197,14 @@ extension SoftwareUpdateClient: DependencyKey {
 
                 return hostURL
             },
-            appBuildNumber: {
+            appBuildNumber: { _ in
                 return 8090
             },
             appShortVersion: {
                 "8.0.9"
+            },
+            backgroundFrequency: { _ in
+                5
             },
             checkForUpdates: {
                 return .none
@@ -221,11 +236,12 @@ extension SoftwareUpdateClient: DependencyKey {
 
 extension SoftwareUpdateClient: TestDependencyKey {
     public static let testValue = Self(
-        websiteURL: XCTUnimplemented("\(Self.self).websiteURL"),
-        appBuildNumber: XCTUnimplemented("\(Self.self).appBuildNumber"),
-        appShortVersion: XCTUnimplemented("\(Self.self).appShortVersion"),
-        checkForUpdates: XCTUnimplemented("\(Self.self).checkForUpdates"),
-        downloadUpdate: XCTUnimplemented("\(Self.self).downloadUpdate"),
-        installUpgrade: XCTUnimplemented("\(Self.self).installUpgrade")
+        websiteURL: unimplemented("\(Self.self).websiteURL", placeholder: .home),
+        appBuildNumber: unimplemented("\(Self.self).appBuildNumber", placeholder: 1010),
+        appShortVersion: unimplemented("\(Self.self).appShortVersion", placeholder: "1.0.1"),
+        backgroundFrequency: unimplemented("\(Self.self).backgroundFrequency", placeholder: 10),
+        checkForUpdates: unimplemented("\(Self.self).checkForUpdates", placeholder: .none),
+        downloadUpdate: unimplemented("\(Self.self).downloadUpdate"),
+        installUpgrade: unimplemented("\(Self.self).installUpgrade")
     )
 }

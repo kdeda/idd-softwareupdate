@@ -41,6 +41,7 @@ public struct SoftwareUpdate {
         public var downloadedByteCount = 0
         public var installStep: InstallStep = .none
         public var settings: Settings = Settings.lastSaved
+        var optionPressed = false
 
         @Presents var alert: DNSAlert<Action.Alert>.State?
 
@@ -140,12 +141,8 @@ public struct SoftwareUpdate {
                 // this should alwyas run and do nothing if we have ui up
                 let isInteracting = state.installStep != .none
                 let shouldCheck = state.settings.shouldCheckForUpdates
+                let frequency = softwareUpdateClient.backgroundFrequency(state.optionPressed)
 
-#if DEBUG
-                let frequency = 5 //in seconds
-#else
-                let frequency = 60 * 60 // in seconds
-#endif
                 Log4swift[Self.self].info(".checkForUpdatesInBackgroundOnce: frequency: '\(state.settings.updateInterval.name)' lastCheck: '\(state.settings.lastCheckString) 'nextCheck: '\(state.settings.nextCheckDate.stringWithDateFormatter(Settings.dateFormatter))' isInteracting: '\(isInteracting)' shouldCheck: '\(shouldCheck)'")
                 return .run { send in
                     if !isInteracting && shouldCheck {
@@ -163,6 +160,15 @@ public struct SoftwareUpdate {
 
             case .checkForUpdates:
                 state.installStep = .checkForUpdates
+                /**
+                 When we option click do force upgrade this binary with new build from server
+                 */
+                let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.ModifierFlags(rawValue: 0)
+                if flags.contains([.option]) {
+                    // option click, we will always trigger the need for upgrade
+                    Log4swift[Self.self].error(".checkForUpdates option click path ...")
+                    state.optionPressed = true
+                }
 
                 if UpdateInfo.installUpdateDebug {
                     // quick debuging
@@ -195,7 +201,7 @@ public struct SoftwareUpdate {
                 }
 
             case let .checkForUpdatesDidEnd(update, isBackground):
-                let buildNumber = softwareUpdateClient.appBuildNumber()
+                let buildNumber = softwareUpdateClient.appBuildNumber(state.optionPressed)
                 let shortVersion = softwareUpdateClient.appShortVersion()
 
                 Log4swift[Self.self].info(".checkForUpdatesDidEnd update: '\(update.buildNumber)','\(update.shortVersion)', app: '\(buildNumber)','\(shortVersion)', datePublished: '\(update.datePublished)', downloadByteCount: '\(update.downloadByteCount.decimalFormatted)', isBackground: '\(isBackground ? "yuup" : "noop")'")
