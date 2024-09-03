@@ -134,6 +134,10 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
 
         if decrypted != json {
             Log4swift[Self.self].error("Failed to assert the signatures. This should not happen.")
+            // DEDA DEBUG
+            // comment out on release
+            Log4swift[Self.self].error("json: '\(json)'")
+            Log4swift[Self.self].error("decrypted: '\(decrypted)'")
             return true
         }
 

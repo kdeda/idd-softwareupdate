@@ -99,19 +99,20 @@ extension SoftwareUpdateClient: DependencyKey {
                 try? await clock.sleep(for: .milliseconds(500))
 
                 let updateURL = UpdateInfo.hostURL.appendingPathComponent("software/whatsize8/release/update.json")
+                Log4swift[Self.self].info(function: "checkForUpdates", "UpdateInfo.hostURL: '\(updateURL.absoluteString)'")
                 var request = URLRequest(url: updateURL)
 
                 request.cachePolicy = .reloadIgnoringCacheData
                 guard let result = try? await URLSession.shared.data(for: request),
                       let response = result.1 as? HTTPURLResponse
                 else {
-                    Log4swift[Self.self].error("response: 'no response'")
+                    Log4swift[Self.self].error(function: "checkForUpdates", "response: 'no response'")
                     return .none
                 }
 
                 guard response.statusCode == 200
                 else {
-                    Log4swift[Self.self].error("response: '\(response)'")
+                    Log4swift[Self.self].error(function: "checkForUpdates", "response: '\(response)'")
                     return .none
                 }
 
@@ -122,8 +123,8 @@ extension SoftwareUpdateClient: DependencyKey {
                     return rv.wasTempered ? .empty : rv.updatingHostURL
                 } catch let error {
                     let json = String.init(data: data, encoding: .utf8) ?? ""
-                    Log4swift[Self.self].error("json: '\(json)'")
-                    Log4swift[Self.self].error("error: '\(error)'")
+                    Log4swift[Self.self].error(function: "checkForUpdates", "json: '\(json)'")
+                    Log4swift[Self.self].error(function: "checkForUpdates", "error: '\(error)'")
                 }
                 return .none
             },
@@ -142,7 +143,7 @@ extension SoftwareUpdateClient: DependencyKey {
                             try? Data().write(to: update.downloadPKGURL)
                             guard let fileHandle = try? FileHandle(forWritingTo: update.downloadPKGURL)
                             else {
-                                Log4swift[Self.self].error(".downloadUpdate: failed to open '\(update.downloadPKGURL.path)'")
+                                Log4swift[Self.self].error(function: "downloadUpdate", "failed to open '\(update.downloadPKGURL.path)'")
                                 // continuation.yield(.error(.failedToOpen(update.downloadPKGURL)))
                                 throw DownloadUpdateError.failedToOpen(update.downloadPKGURL)
                             }

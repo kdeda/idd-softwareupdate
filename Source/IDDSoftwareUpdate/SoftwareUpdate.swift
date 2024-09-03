@@ -166,7 +166,7 @@ public struct SoftwareUpdate {
                 let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.ModifierFlags(rawValue: 0)
                 if flags.contains([.option]) {
                     // option click, we will always trigger the need for upgrade
-                    Log4swift[Self.self].error(".checkForUpdates option click path ...")
+                    Log4swift[Self.self].info(".checkForUpdates option click path ...")
                     state.optionPressed = true
                 }
 
