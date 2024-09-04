@@ -40,8 +40,8 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
         return false
     }()
 
-    internal static let updatesCipher = Cipher(password: updateCipherPassword, version: 1)
-    public static let jsonDecoder: JSONDecoder = {
+    private static let updatesCipher = Cipher(password: updateCipherPassword, version: 1)
+    private static let jsonDecoder: JSONDecoder = {
         let rv = JSONDecoder()
 
         rv.dateDecodingStrategy = .formatted(Date.defaultFormatter)
@@ -89,12 +89,18 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
     )
 
     public let buildNumber: Int
+    /// UTC Date
     public let datePublished: Date
     public var downloadByteCount: Int
     public var downloadSHA256: String
     public var downloadURL: URL
     public var releaseNotesURL: URL
     public let shortVersion: String
+    /**
+     When fetching the udate instance from the internet
+     This should contain the Self.updatesCipher.encrypt of self json
+     Otherwise we should keep this as empty string
+     */
     public var signature: String
 
     public init(buildNumber: Int,
@@ -116,6 +122,10 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
         self.signature = signature
     }
 
+    init(jsonData: Data) throws {
+        self = try Self.jsonDecoder.decode(UpdateInfo.self, from: jsonData)
+    }
+
     public var datePublishedString: String {
         Self.localDateFormatter.string(from: datePublished)
     }
@@ -123,20 +133,28 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
     /**
      We will not know until the bytes from downloadURL have been downloaded.
      Return true if this payload or the bytes it represents has been tempered.
+
+     Make sure to not mangle the date as json, dates are UTC
      */
     public var wasTempered: Bool {
+        let decrypted: Self? = {
+            let decryptedJson = Self.updatesCipher.decrypt(self.signature)
+            let decryptedData = decryptedJson.data(using: .utf8) ?? Data()
+            var rv = try? Self.init(jsonData: decryptedData)
+            
+            rv?.signature = ""
+            return rv
+        }()
+
+        guard let decrypted = decrypted
+        else { return true }
+
         var copy = self
+        copy.signature = ""
 
-        copy.signature = UpdateInfo.updateCipherPassword // placeholder, hard to guess for someone willing to temper these
-        let jsonData = (try? UpdateInfo.jsonEncoder.encode(copy)) ?? Data()
-        let json = String(data: jsonData, encoding: .utf8) ?? ""
-        let decrypted = UpdateInfo.updatesCipher.decrypt(self.signature)
-
-        if decrypted != json {
+        if decrypted != copy {
             Log4swift[Self.self].error("Failed to assert the signatures. This should not happen.")
-            // DEDA DEBUG
-            // comment out on release
-            Log4swift[Self.self].error("json: '\(json)'")
+            Log4swift[Self.self].error(" original: '\(copy)'")
             Log4swift[Self.self].error("decrypted: '\(decrypted)'")
             return true
         }

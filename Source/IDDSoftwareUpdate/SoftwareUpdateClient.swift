@@ -118,7 +118,7 @@ extension SoftwareUpdateClient: DependencyKey {
 
                 let data = result.0
                 do {
-                    let rv = try UpdateInfo.jsonDecoder.decode(UpdateInfo.self, from: data)
+                    let rv = try UpdateInfo.init(jsonData: data)
 
                     return rv.wasTempered ? .empty : rv.updatingHostURL
                 } catch let error {

@@ -344,7 +344,7 @@ public struct SoftwareUpdate {
 
                 // store the just handled update
                 let data = Data.init(withURL: jsonFileURL)
-                let update = try? UpdateInfo.jsonDecoder.decode(UpdateInfo.self, from: data)
+                let update = try? UpdateInfo.init(jsonData: data)
 
                 state.update = update ?? .empty
                 state.installStep = .installUpgradeCompleted
