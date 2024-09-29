@@ -54,7 +54,7 @@ public struct SoftwareUpdate {
         case checkForUpdatesInBackgroundOnce
         case checkForUpdates
         case cancelCheckForUpdates
-        case checkForUpdatesDidEnd(UpdateInfo, Bool)
+        case checkForUpdatesDidEnd(UpdateInfo, isBackground: Bool)
 
         case skipThisVersion
         case remindMeLater
@@ -115,8 +115,8 @@ public struct SoftwareUpdate {
             await send(.delegate(.completed))
             // hang on a tinny bit
             try await clock.sleep(for: .milliseconds(50))
-            await NSApp.hide(nil)
-            
+            await NSApplication.shared.hide(nil)
+
             await softwareUpdateClient.installUpgrade(
                 UpdateInfo.installUpdateDebug ? URL.home.appendingPathComponent("Desktop/Packages/WhatSize_8.1.0/WhatSize.pkg").path : pkgFilePath
             )
@@ -147,7 +147,7 @@ public struct SoftwareUpdate {
                 return .run { send in
                     if !isInteracting && shouldCheck {
                         if let update = await softwareUpdateClient.checkForUpdates() {
-                            await send(.checkForUpdatesDidEnd(update, true))
+                            await send(.checkForUpdatesDidEnd(update, isBackground: true))
                             return
                         }
                         // we will re-try in a bit
@@ -163,7 +163,7 @@ public struct SoftwareUpdate {
                 /**
                  When we option click do force upgrade this binary with new build from server
                  */
-                let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.ModifierFlags(rawValue: 0)
+                let flags = NSApplication.shared.currentEvent?.modifierFlags ?? NSEvent.ModifierFlags(rawValue: 0)
                 if flags.contains([.option]) {
                     // option click, we will always trigger the need for upgrade
                     Log4swift[Self.self].info(".checkForUpdates option click path ...")
@@ -186,7 +186,7 @@ public struct SoftwareUpdate {
                     Task.cancel(id: CancelID.checkForUpdatesInBackgroundOnce)
                     await send(.delegate(.started))
                     if let update = await softwareUpdateClient.checkForUpdates() {
-                        await send(.checkForUpdatesDidEnd(update, false))
+                        await send(.checkForUpdatesDidEnd(update, isBackground: false))
                         return
                     }
                     try await clock.sleep(for: .milliseconds(250))

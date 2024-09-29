@@ -28,12 +28,25 @@ enum DownloadUpdateError: LocalizedError, Equatable {
  Helpers to obtain the last update and fetch it if needed.
  */
 public struct SoftwareUpdateClient {
+    // web site to hit
     public var websiteURL: () -> URL
+
+    // currently installed appNumber
     public var appBuildNumber: (_ optionPressed: Bool) -> Int
+
+    // currently installed short version
     public var appShortVersion: () -> String
+
+    // frequency in seconds to perform background updates, default is once an hour
     public var backgroundFrequency: (_ optionPressed: Bool) -> Int
+
+    // fetch the new update
     public var checkForUpdates: @Sendable () async -> UpdateInfo?
+
+    // download the bytes for the new update
     public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>
+
+    // install the update previosly downloaded
     public var installUpgrade: @Sendable (_ pkgFilePath: String) async -> Void
 
     public init(
