@@ -28,7 +28,23 @@ enum DownloadUpdateError: LocalizedError, Equatable {
  Helpers to obtain the last update and fetch it if needed.
  */
 public struct SoftwareUpdateClient {
-    // web site to hit
+    /**
+     Web site to hit, Override it !
+     ```
+    self.store = Store(
+         initialState: AppReducer.State(),
+         reducer: AppReducer.init,
+         withDependencies: {
+             $0.softwareUpdateClient.websiteURL = {
+                 guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
+                       let hostURL = URL(string: hostURLString)
+                 else { return URL(string: "https://www.whatsizemac.com")! }
+                 return hostURL
+             }
+         }
+     )
+     ```
+     */
     public var websiteURL: () -> URL
 
     // currently installed appNumber
@@ -77,16 +93,13 @@ extension DependencyValues {
 
 extension SoftwareUpdateClient: DependencyKey {
     public static let liveValue: Self = {
-        let appBuildNumber_ = ActorIsolated(Bundle.main.appVersion.buildNumber)
+        let appBuildNumber_ = LockIsolated(Bundle.main.appVersion.buildNumber)
         @Dependency(\.continuousClock) var clock
 
         return Self(
             websiteURL: {
-                guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
-                      let hostURL = URL(string: hostURLString)
-                else { return URL(string: "https://test.whatsizemac.com")! }
-
-                return hostURL
+                Log4swift[Self.self].error(function: "websiteURL", "override me ...")
+                fatalError()
             },
             appBuildNumber: { optionPressed in
                 var buildNumber = Bundle.main.appVersion.buildNumber
