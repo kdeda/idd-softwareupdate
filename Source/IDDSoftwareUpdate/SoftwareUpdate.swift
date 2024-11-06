@@ -41,6 +41,7 @@ public struct SoftwareUpdate {
         public var downloadedByteCount = 0
         public var installStep: InstallStep = .none
         public var settings: Settings = Settings.lastSaved
+        var useTestServer = false
         var optionPressed = false
 
         @Presents var alert: DNSAlert<Action.Alert>.State?
@@ -141,12 +142,13 @@ public struct SoftwareUpdate {
                 // this should alwyas run and do nothing if we have ui up
                 let isInteracting = state.installStep != .none
                 let shouldCheck = state.settings.shouldCheckForUpdates
+                let useTestServer = state.useTestServer
                 let frequency = softwareUpdateClient.backgroundFrequency(state.optionPressed)
 
                 Log4swift[Self.self].info(".checkForUpdatesInBackgroundOnce: frequency: '\(state.settings.updateInterval.name)' lastCheck: '\(state.settings.lastCheckString) 'nextCheck: '\(state.settings.nextCheckDate.stringWithDateFormatter(Settings.dateFormatter))' isInteracting: '\(isInteracting)' shouldCheck: '\(shouldCheck)'")
                 return .run { send in
                     if !isInteracting && shouldCheck {
-                        if let update = await softwareUpdateClient.checkForUpdates() {
+                        if let update = await softwareUpdateClient.checkForUpdates(useTestServer) {
                             await send(.checkForUpdatesDidEnd(update, isBackground: true))
                             return
                         }
@@ -162,11 +164,13 @@ public struct SoftwareUpdate {
                 state.installStep = .checkForUpdates
                 /**
                  When we option click do force upgrade this binary with new build from server
+                 When we command, option click we will use the test.whatsizemac.com server
                  */
                 let flags = NSApplication.shared.currentEvent?.modifierFlags ?? NSEvent.ModifierFlags(rawValue: 0)
+                state.useTestServer = flags.contains([.option, .command])
                 if flags.contains([.option]) {
                     // option click, we will always trigger the need for upgrade
-                    Log4swift[Self.self].info(".checkForUpdates option click path ...")
+                    Log4swift[Self.self].info(".checkForUpdates option click path ... useTestServer: '\(state.useTestServer)'")
                     state.optionPressed = true
                 }
 
@@ -182,10 +186,11 @@ public struct SoftwareUpdate {
                     }
                 }
 
+                let useTestServer = state.useTestServer
                 return .run { send in
                     Task.cancel(id: CancelID.checkForUpdatesInBackgroundOnce)
                     await send(.delegate(.started))
-                    if let update = await softwareUpdateClient.checkForUpdates() {
+                    if let update = await softwareUpdateClient.checkForUpdates(useTestServer) {
                         await send(.checkForUpdatesDidEnd(update, isBackground: false))
                         return
                     }

@@ -45,7 +45,7 @@ public struct SoftwareUpdateClient {
      )
      ```
      */
-    public var websiteURL: () -> URL
+    public var websiteURL: (_ useTestServer: Bool) -> URL
 
     // currently installed appNumber
     public var appBuildNumber: (_ optionPressed: Bool) -> Int
@@ -57,7 +57,7 @@ public struct SoftwareUpdateClient {
     public var backgroundFrequency: (_ optionPressed: Bool) -> Int
 
     // fetch the new update
-    public var checkForUpdates: @Sendable () async -> UpdateInfo?
+    public var checkForUpdates: @Sendable (_ useTestServer: Bool) async -> UpdateInfo?
 
     // download the bytes for the new update
     public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>
@@ -66,13 +66,13 @@ public struct SoftwareUpdateClient {
     public var installUpgrade: @Sendable (_ pkgFilePath: String) async -> Void
 
     public init(
-        websiteURL: @escaping () -> URL,
+        websiteURL: @escaping (_ useTestServer: Bool) -> URL,
         appBuildNumber: @escaping (_ optionPressed: Bool) -> Int,
         appShortVersion: @escaping () -> String,
         backgroundFrequency: @escaping (_ optionPressed: Bool) -> Int,
-        checkForUpdates: @escaping @Sendable () async -> UpdateInfo?,
-        downloadUpdate: @escaping @Sendable (_: UpdateInfo) throws -> AsyncStream<Int>,
-        installUpgrade: @escaping @Sendable (_: String) async -> Void
+        checkForUpdates: @escaping @Sendable (_ useTestServer: Bool) async -> UpdateInfo?,
+        downloadUpdate: @escaping @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>,
+        installUpgrade: @escaping @Sendable (_ pkgFilePath: String) async -> Void
     ) {
         self.websiteURL = websiteURL
         self.appBuildNumber = appBuildNumber
@@ -97,7 +97,7 @@ extension SoftwareUpdateClient: DependencyKey {
         @Dependency(\.continuousClock) var clock
 
         return Self(
-            websiteURL: {
+            websiteURL: { useTestServer in
                 Log4swift[Self.self].error(function: "websiteURL", "override me ...")
                 fatalError()
             },
@@ -120,11 +120,11 @@ extension SoftwareUpdateClient: DependencyKey {
                 }
                 return frequency
             },
-            checkForUpdates: {
+            checkForUpdates: { useTestServer in
                 // DEDA DEBUG
                 try? await clock.sleep(for: .milliseconds(500))
 
-                let updateURL = UpdateInfo.hostURL.appendingPathComponent("software/whatsize8/release/update.json")
+                let updateURL = UpdateInfo.hostURL(useTestServer).appendingPathComponent("software/whatsize8/release/update.json")
                 Log4swift[Self.self].info(function: "checkForUpdates", "UpdateInfo.hostURL: '\(updateURL.absoluteString)'")
                 var request = URLRequest(url: updateURL)
 
@@ -144,8 +144,9 @@ extension SoftwareUpdateClient: DependencyKey {
 
                 let data = result.0
                 do {
-                    let rv = try UpdateInfo.init(jsonData: data)
+                    var rv = try UpdateInfo.init(jsonData: data)
 
+                    rv.useTestServer = useTestServer
                     return rv.wasTempered ? .empty : rv.updatingHostURL
                 } catch let error {
                     let json = String.init(data: data, encoding: .utf8) ?? ""
@@ -217,7 +218,7 @@ extension SoftwareUpdateClient: DependencyKey {
         @Dependency(\.continuousClock) var clock
 
         return Self(
-            websiteURL: {
+            websiteURL: { useTestServer in
                 guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
                       let hostURL = URL(string: hostURLString)
                 else { return URL(string: "https://test.whatsizemac.com")! }
@@ -233,7 +234,7 @@ extension SoftwareUpdateClient: DependencyKey {
             backgroundFrequency: { _ in
                 5
             },
-            checkForUpdates: {
+            checkForUpdates: { useTestServer in
                 return .none
             },
             downloadUpdate: { update in

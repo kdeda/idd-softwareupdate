@@ -10,7 +10,7 @@ import Foundation
 import IDDSwiftUI
 import ComposableArchitecture
 
-public struct UpdateInfo: Equatable, Codable, Sendable {
+public struct UpdateInfo: Equatable, Sendable {
     /**
      this should match to ../git.id-design.com/installer_tools/xchelper/xchelper/WhatSize8/Project.json
     */
@@ -20,9 +20,9 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
      fast debug turn around
      -UpdateInfo.hostURL http://local.whatsizemac.com
      */
-    public static var hostURL: URL {
+    public static func hostURL(_ useTestServer: Bool) -> URL {
         @Dependency(\.softwareUpdateClient) var softwareUpdateClient
-        return softwareUpdateClient.websiteURL()
+        return softwareUpdateClient.websiteURL(useTestServer)
     }
 
     /**
@@ -85,8 +85,8 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
         datePublished: .distantFuture,
         downloadByteCount: 19582879,
         downloadSHA256: "",
-        downloadURL: Self.hostURL.appendingPathComponent("software/whatsize8/whatsize_8.0.1.pkg"),
-        releaseNotesURL: Self.hostURL.appendingPathComponent("software/whatsize8/release/notes.html"),
+        downloadURL: Self.hostURL(false).appendingPathComponent("software/whatsize8/whatsize_8.0.1.pkg"),
+        releaseNotesURL: Self.hostURL(false).appendingPathComponent("software/whatsize8/release/notes.html"),
         shortVersion: "1.0.1",
         signature: ""
     )
@@ -105,6 +105,7 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
      Otherwise we should keep this as empty string
      */
     public var signature: String
+    public var useTestServer: Bool = false
 
     public init(buildNumber: Int,
          datePublished: Date,
@@ -153,7 +154,9 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
         else { return true }
 
         var copy = self
+        // ignore these two in the compare
         copy.signature = ""
+        copy.useTestServer = false
 
         if decrypted != copy {
             Log4swift[Self.self].error("Failed to assert the signatures. This should not happen.")
@@ -183,8 +186,8 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
     var updatingHostURL: Self {
         var copy = self
         
-        copy.downloadURL = Self.hostURL.appendingPathComponent(self.downloadURL.path)
-        copy.releaseNotesURL = Self.hostURL.appendingPathComponent(self.releaseNotesURL.path)
+        copy.downloadURL = Self.hostURL(useTestServer).appendingPathComponent(self.downloadURL.path)
+        copy.releaseNotesURL = Self.hostURL(useTestServer).appendingPathComponent(self.releaseNotesURL.path)
         return copy
     }
 
@@ -207,4 +210,17 @@ public struct UpdateInfo: Equatable, Codable, Sendable {
         return lhs_json == rhs_json
     }
 
+}
+
+extension UpdateInfo: Codable {
+    enum CodingKeys: String, CodingKey {
+        case buildNumber
+        case datePublished
+        case downloadByteCount
+        case downloadSHA256
+        case downloadURL
+        case releaseNotesURL
+        case shortVersion
+        case signature
+    }
 }
