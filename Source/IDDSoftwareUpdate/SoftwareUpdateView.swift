@@ -1,6 +1,6 @@
 //
 //  SoftwareUpdateView.swift
-//  IDDSoftwareUpdate
+//  idd-softwareupdate
 //
 //  Created by Klajd Deda on 4/3/24.
 //  Copyright (C) 1997-2024 id-design, inc. All rights reserved.

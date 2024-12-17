@@ -1,6 +1,6 @@
 //
 //  SoftwareUpdate.swift
-//  IDDSoftwareUpdate
+//  idd-softwareupdate
 //
 //  Created by Klajd Deda on 4/3/24.
 //  Copyright (C) 1997-2024 id-design, inc. All rights reserved.
@@ -279,7 +279,7 @@ public struct SoftwareUpdate {
                         // Did we get is what we were supposed
                         var freshUpdate = update
 
-                        freshUpdate.downloadSHA256 = update.downloadPKGURL.sha256
+                        freshUpdate.downloadSHA256 = update.downloadPKGURL.sha256With68Chars
                         freshUpdate.downloadByteCount = Int(update.downloadPKGURL.logicalSize)
                         if !freshUpdate.validateSignatures(update) {
                             Log4swift[Self.self].error(".downloadUpdate: failed to assert the signatures. This should not happen.")

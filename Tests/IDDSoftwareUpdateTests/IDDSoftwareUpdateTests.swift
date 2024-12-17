@@ -1,5 +1,5 @@
 //
-//  IDDSoftwareUpdateTests.swift
+//  idd-softwareupdateTests.swift
 //  IDDFolderScan
 //
 //  Created by Klajd Deda on 01/05/23.
