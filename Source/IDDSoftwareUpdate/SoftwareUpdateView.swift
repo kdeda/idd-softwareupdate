@@ -295,6 +295,7 @@ public struct SoftwareUpdateView: View {
     }
 }
 
+@MainActor
 fileprivate func store() -> StoreOf<SoftwareUpdate> {
     var state = SoftwareUpdate.State()
 
