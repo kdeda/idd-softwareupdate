@@ -8,7 +8,7 @@
 
 import Foundation
 import SwiftUI
-import IDDSwiftUI
+@preconcurrency import IDDSwiftUI
 import ComposableArchitecture
 import WebKit
 
@@ -295,6 +295,7 @@ public struct SoftwareUpdateView: View {
     }
 }
 
+@MainActor
 fileprivate func store() -> StoreOf<SoftwareUpdate> {
     var state = SoftwareUpdate.State()
 

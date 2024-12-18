@@ -27,7 +27,7 @@ enum DownloadUpdateError: LocalizedError, Equatable {
 /**
  Helpers to obtain the last update and fetch it if needed.
  */
-public struct SoftwareUpdateClient {
+public struct SoftwareUpdateClient: Sendable {
     /**
      Web site to hit, Override it !
      ```
@@ -45,16 +45,16 @@ public struct SoftwareUpdateClient {
      )
      ```
      */
-    public var websiteURL: (_ useTestServer: Bool) -> URL
+    public var websiteURL: @Sendable (_ useTestServer: Bool) -> URL
 
     // currently installed appNumber
-    public var appBuildNumber: (_ optionPressed: Bool) -> Int
+    public var appBuildNumber: @Sendable (_ optionPressed: Bool) -> Int
 
     // currently installed short version
-    public var appShortVersion: () -> String
+    public var appShortVersion: @Sendable () -> String
 
     // frequency in seconds to perform background updates, default is once an hour
-    public var backgroundFrequency: (_ optionPressed: Bool) -> Int
+    public var backgroundFrequency: @Sendable (_ optionPressed: Bool) -> Int
 
     // fetch the new update
     public var checkForUpdates: @Sendable (_ useTestServer: Bool) async -> UpdateInfo?
@@ -66,13 +66,13 @@ public struct SoftwareUpdateClient {
     public var installUpgrade: @Sendable (_ pkgFilePath: String) async -> Void
 
     public init(
-        websiteURL: @escaping (_ useTestServer: Bool) -> URL,
-        appBuildNumber: @escaping (_ optionPressed: Bool) -> Int,
-        appShortVersion: @escaping () -> String,
-        backgroundFrequency: @escaping (_ optionPressed: Bool) -> Int,
-        checkForUpdates: @escaping @Sendable (_ useTestServer: Bool) async -> UpdateInfo?,
-        downloadUpdate: @escaping @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>,
-        installUpgrade: @escaping @Sendable (_ pkgFilePath: String) async -> Void
+        websiteURL: @Sendable @escaping (_ useTestServer: Bool) -> URL,
+        appBuildNumber: @Sendable @escaping (_ optionPressed: Bool) -> Int,
+        appShortVersion: @Sendable @escaping () -> String,
+        backgroundFrequency: @Sendable @escaping (_ optionPressed: Bool) -> Int,
+        checkForUpdates: @Sendable @escaping (_ useTestServer: Bool) async -> UpdateInfo?,
+        downloadUpdate: @Sendable @escaping (_ update: UpdateInfo) throws -> AsyncStream<Int>,
+        installUpgrade: @Sendable @escaping (_ pkgFilePath: String) async -> Void
     ) {
         self.websiteURL = websiteURL
         self.appBuildNumber = appBuildNumber
@@ -94,7 +94,6 @@ extension DependencyValues {
 extension SoftwareUpdateClient: DependencyKey {
     public static let liveValue: Self = {
         let appBuildNumber_ = LockIsolated(Bundle.main.appVersion.buildNumber)
-        @Dependency(\.continuousClock) var clock
 
         return Self(
             websiteURL: { useTestServer in
@@ -121,8 +120,9 @@ extension SoftwareUpdateClient: DependencyKey {
                 return frequency
             },
             checkForUpdates: { useTestServer in
+                @Dependency(\.continuousClock) var clock
                 // DEDA DEBUG
-                try? await clock.sleep(for: .milliseconds(500))
+                try? await clock.sleep(for: .milliseconds(250))
 
                 let updateURL = UpdateInfo.hostURL(useTestServer).appendingPathComponent("software/whatsize8/release/update.json")
                 Log4swift[Self.self].info(function: "checkForUpdates", "UpdateInfo.hostURL: '\(updateURL.absoluteString)'")
@@ -215,8 +215,6 @@ extension SoftwareUpdateClient: DependencyKey {
     }()
 
     public static let previewValue: Self = {
-        @Dependency(\.continuousClock) var clock
-
         return Self(
             websiteURL: { useTestServer in
                 guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
@@ -242,6 +240,8 @@ extension SoftwareUpdateClient: DependencyKey {
                     Log4swift[Self.self].info(function: "downloadUpdate", "update: '\(update)'")
 
                     let task = Task.detached {
+                        @Dependency(\.continuousClock) var clock
+                        
                         await (0 ..< 100).asyncForEach { _ in
                             try? await clock.sleep(for: .milliseconds(250))
                             continuation.yield(100)

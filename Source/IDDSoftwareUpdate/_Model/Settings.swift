@@ -11,9 +11,21 @@ import IDDSwift
 
 extension SoftwareUpdate {
     public struct Settings: Equatable, Codable, Sendable {
-        public static var defaultItem = Settings()
-        @UserDefaultsValue(.defaultItem, forKey: "CheckForUpdates.Settings.lastSaved")
-        public static var lastSaved: Settings
+        public static let defaultItem = Settings()
+        public static var lastSaved: Settings {
+            get {
+                @UserDefaultsValue(.defaultItem, forKey: "CheckForUpdates.Settings.lastSaved")
+                var lastSaved: Settings
+
+                return _lastSaved.wrappedValue
+            }
+            set {
+                @UserDefaultsValue(.defaultItem, forKey: "CheckForUpdates.Settings.lastSaved")
+                var lastSaved: Settings
+
+                _lastSaved.wrappedValue = newValue
+            }
+        }
 
         internal static let dateFormatter: DateFormatter = {
             var rv = DateFormatter()

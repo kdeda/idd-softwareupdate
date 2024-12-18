@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import IDDSwiftUI
+@preconcurrency import IDDSwiftUI
 import ComposableArchitecture
 
 public struct UpdateInfo: Equatable, Sendable {
@@ -15,6 +15,7 @@ public struct UpdateInfo: Equatable, Sendable {
      this should match to ../git.id-design.com/installer_tools/xchelper/xchelper/WhatSize8/Project.json
     */
     internal static let updateCipherPassword = "6FA668D8-9839-47F2-93E2-4F9A9D8E61CF"
+    internal static let boobs                = "80088008-8008-8008-8008-800800008008"
 
     /**
      fast debug turn around
@@ -29,14 +30,14 @@ public struct UpdateInfo: Equatable, Sendable {
      fast debug turn around
      -UpdateInfo.checkForUpdatesAutomatically true
      */
-    public static var checkForUpdatesAutomatically: Bool = {
+    public static let checkForUpdatesAutomatically: Bool = {
         if UserDefaults.standard.bool(forKey: "UpdateInfo.checkForUpdatesAutomatically") {
             return true
         }
         return false
     }()
 
-    public static var installUpdateDebug: Bool = {
+    public static let installUpdateDebug: Bool = {
         if UserDefaults.standard.bool(forKey: "UpdateInfo.installUpdateDebug") {
             return true
         }
@@ -64,7 +65,7 @@ public struct UpdateInfo: Equatable, Sendable {
             negativeInfinity: "-Infinity",
             nan: "NaN"
         )
-        rv.outputFormatting = [.prettyPrinted, .sortedKeys]
+        rv.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return rv
     }()
 
@@ -144,21 +145,23 @@ public struct UpdateInfo: Equatable, Sendable {
         let decrypted: Self? = {
             let decryptedJson = Self.updatesCipher.decrypt(self.signature)
             let decryptedData = decryptedJson.data(using: .utf8) ?? Data()
-            var rv = try? Self.init(jsonData: decryptedData)
+            let rv = try? Self.init(jsonData: decryptedData)
             
-            rv?.signature = ""
             return rv
         }()
 
-        guard let decrypted = decrypted
+        guard var decrypted = decrypted
         else { return true }
 
         var copy = self
+
         // ignore these two in the compare
-        copy.signature = ""
+        copy.signature = UpdateInfo.boobs
+        decrypted.signature = UpdateInfo.boobs
         copy.useTestServer = false
 
         if decrypted != copy {
+            // will not print the signature
             Log4swift[Self.self].error("Failed to assert the signatures. This should not happen.")
             Log4swift[Self.self].error(" original: '\(copy)'")
             Log4swift[Self.self].error("decrypted: '\(decrypted)'")
@@ -191,6 +194,13 @@ public struct UpdateInfo: Equatable, Sendable {
         return copy
     }
 
+    private var jsonString: String {
+        let data = (try? Self.jsonEncoder.encode(self)) ?? Data()
+        let stringValue = String(data: data, encoding: .utf8) ?? ""
+
+        return stringValue
+    }
+
     /**
      These should match
      */
@@ -200,14 +210,18 @@ public struct UpdateInfo: Equatable, Sendable {
 
         lhs.signature = Self.updateCipherPassword // placeholder, hard to guess for someone willing to temper these
         rhs.signature = Self.updateCipherPassword // placeholder, hard to guess for someone willing to temper these
+        if lhs.jsonString != rhs.jsonString {
+            lhs.signature = UpdateInfo.boobs
+            rhs.signature = UpdateInfo.boobs
 
-        let lhs_jsonData = (try? Self.jsonEncoder.encode(lhs)) ?? Data()
-        let lhs_json = String(data: lhs_jsonData, encoding: .utf8) ?? ""
-
-        let rhs_jsonData = (try? Self.jsonEncoder.encode(rhs)) ?? Data()
-        let rhs_json = String(data: rhs_jsonData, encoding: .utf8) ?? ""
-
-        return lhs_json == rhs_json
+            // do not print the signature
+            Log4swift[Self.self].error("Failed to assert the signatures. This should not happen.")
+            Log4swift[Self.self].error(" original: '\(lhs.jsonString)'")
+            Log4swift[Self.self].error("decrypted: '\(rhs.jsonString)'")
+            return false
+        }
+        
+        return true
     }
 
 }

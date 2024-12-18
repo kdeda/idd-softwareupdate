@@ -34,9 +34,9 @@ import IDDAlert
  /Applications/WhatSize.app/Contents/MacOS/WhatSize -standardLog true -WhatSize.softwareUpdateHost http://local.whatsizemac.com
  */
 @Reducer
-public struct SoftwareUpdate {
+public struct SoftwareUpdate: Sendable {
     @ObservableState
-    public struct State: Equatable {
+    public struct State: Equatable, Sendable {
         public var update: UpdateInfo = .empty
         public var downloadedByteCount = 0
         public var installStep: InstallStep = .none
@@ -118,9 +118,12 @@ public struct SoftwareUpdate {
             try await clock.sleep(for: .milliseconds(50))
             await NSApplication.shared.hide(nil)
 
-            await softwareUpdateClient.installUpgrade(
-                UpdateInfo.installUpdateDebug ? URL.home.appendingPathComponent("Desktop/Packages/WhatSize_8.1.0/WhatSize.pkg").path : pkgFilePath
-            )
+            let pkgFilePath = UpdateInfo.installUpdateDebug
+            ? URL.home.appendingPathComponent("Desktop/Packages/WhatSize_8.1.0/WhatSize.pkg").path
+            : pkgFilePath
+
+            Log4swift[Self.self].info("filePath: '\(pkgFilePath)'")
+            await softwareUpdateClient.installUpgrade(pkgFilePath)
         }
     }
 
@@ -166,7 +169,9 @@ public struct SoftwareUpdate {
                  When we option click do force upgrade this binary with new build from server
                  When we command, option click we will use the test.whatsizemac.com server
                  */
-                let flags = NSApplication.shared.currentEvent?.modifierFlags ?? NSEvent.ModifierFlags(rawValue: 0)
+                let flags = MainActor.assumeIsolated {
+                    NSApplication.shared.currentEvent?.modifierFlags ?? NSEvent.ModifierFlags(rawValue: 0)
+                }
                 state.useTestServer = flags.contains([.option, .command])
                 if flags.contains([.option]) {
                     // option click, we will always trigger the need for upgrade
@@ -276,13 +281,12 @@ public struct SoftwareUpdate {
                             return
                         }
 
-                        // Did we get is what we were supposed
+                        // Did we get what we were supposed to ?
                         var freshUpdate = update
 
                         freshUpdate.downloadSHA256 = update.downloadPKGURL.sha256With68Chars
                         freshUpdate.downloadByteCount = Int(update.downloadPKGURL.logicalSize)
                         if !freshUpdate.validateSignatures(update) {
-                            Log4swift[Self.self].error(".downloadUpdate: failed to assert the signatures. This should not happen.")
                             await send(.delegate(.completed))
                             return
                         }
