@@ -16,9 +16,9 @@ let package = Package(
     ],
     dependencies: [
         // .package(name: "idd-alert", path: "../idd-alert"),
-        .package(url: "https://github.com/kdeda/idd-alert.git", "2.0.1" ..< "3.0.0"),
+        .package(url: "https://github.com/kdeda/idd-alert.git", "2.1.1" ..< "3.0.0"),
         // .package(name: "idd-swift", path: "../idd-swift"),
-        .package(url: "https://github.com/kdeda/idd-swift.git", "2.3.2" ..< "3.0.0"),
+        // .package(url: "https://github.com/kdeda/idd-swift.git", "2.3.6" ..< "3.0.0"),
         .package(url: "https://github.com/kdeda/idd-swiftui.git", "2.1.2" ..< "3.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.17.0")
     ],

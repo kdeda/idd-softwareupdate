@@ -3,7 +3,7 @@
 //  idd-softwareupdate
 //
 //  Created by Klajd Deda on 5/19/24.
-//  Copyright (C) 1997-2024 id-design, inc. All rights reserved.
+//  Copyright (C) 1997-2025 id-design, inc. All rights reserved.
 //
 
 import SwiftUI
