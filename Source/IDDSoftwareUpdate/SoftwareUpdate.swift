@@ -20,9 +20,9 @@ import IDDAlert
  sudo rm -rf /Applications/WhatSize.app
  open -a xcode /Users/kdeda/Developer/git.id-design.com/installer\_tools/xchelper/xchelper/WhatSize8/Project.json
  /Users/kdeda/Developer/git.id-design.com/installer\_tools/scripts/whatsize8.sh
- sudo installer -verbose -pkg ~/Desktop/Packages/WhatSize\_7.7.7/WhatSize.pkg -target /
- sudo installer -verbose -pkg ~/Desktop/Packages/WhatSize\_8.0.8/WhatSize.pkg -target /
- sudo installer -verbose -pkg ~/Desktop/Packages/WhatSize\_8.0.9/WhatSize.pkg -target /
+ sudo installer -dumplog -verbose -pkg ~/Desktop/Packages/WhatSize\_7.7.7/WhatSize.pkg -target /
+ sudo installer -dumplog -verbose -pkg ~/Desktop/Packages/WhatSize\_8.0.8/WhatSize.pkg -target /
+ sudo installer -dumplog -verbose -pkg ~/Desktop/Packages/WhatSize\_8.0.9/WhatSize.pkg -target /
 
  Build verion 8.0.9
  open -a xcode /Users/kdeda/Developer/git.id-design.com/installer\_tools/xchelper/xchelper/WhatSize8/Project.json

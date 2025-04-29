@@ -52,8 +52,8 @@ fileprivate extension String {
         #    This will tell the app that we just got upgraded from this path
         
         echo ""
-        echo "/usr/sbin/installer -verbose -pkg "${ROOT_PATH}/\(pkgName)" -target /"
-        /usr/sbin/installer -verbose -pkg "${ROOT_PATH}/\(pkgName)" -target /
+        echo "/usr/sbin/installer -dumplog -verbose -pkg "${ROOT_PATH}/\(pkgName)" -target /"
+        /usr/sbin/installer -dumplog -verbose -pkg "${ROOT_PATH}/\(pkgName)" -target /
         echo "done"
         
         echo ""
