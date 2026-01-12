@@ -3,7 +3,7 @@
 //  idd-softwareupdate
 //
 //  Created by Klajd Deda on 4/3/24.
-//  Copyright (C) 1997-2025 id-design, inc. All rights reserved.
+//  Copyright (C) 1997-2026 id-design, inc. All rights reserved.
 //
 
 import Foundation
@@ -148,6 +148,7 @@ public struct SoftwareUpdate: Sendable {
                 let useTestServer = state.useTestServer
                 let frequency = softwareUpdateClient.backgroundFrequency(state.optionPressed)
 
+                // Log4swift[Self.self].info(".checkForUpdatesInBackgroundOnce: state.settings: '\(state.settings)'")
                 Log4swift[Self.self].info(".checkForUpdatesInBackgroundOnce: frequency: '\(state.settings.updateInterval.name)' lastCheck: '\(state.settings.lastCheckString) 'nextCheck: '\(state.settings.nextCheckDate.stringWithDateFormatter(Settings.dateFormatter))' isInteracting: '\(isInteracting)' shouldCheck: '\(shouldCheck)'")
                 return .run { send in
                     if !isInteracting && shouldCheck {

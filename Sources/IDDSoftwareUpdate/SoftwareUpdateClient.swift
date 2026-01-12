@@ -3,10 +3,11 @@
 //  idd-softwareupdate
 //
 //  Created by Klajd Deda on 4/17/24.
-//  Copyright (C) 1997-2025 id-design, inc. All rights reserved.
+//  Copyright (C) 1997-2026 id-design, inc. All rights reserved.
 //
 
 import Foundation
+import AppKit
 import IDDSwift
 import Log4swift
 import ComposableArchitecture
@@ -27,6 +28,7 @@ enum DownloadUpdateError: LocalizedError, Equatable {
 /**
  Helpers to obtain the last update and fetch it if needed.
  */
+@DependencyClient
 public struct SoftwareUpdateClient: Sendable {
     /**
      Web site to hit, Override it !
@@ -35,53 +37,44 @@ public struct SoftwareUpdateClient: Sendable {
          initialState: AppReducer.State(),
          reducer: AppReducer.init,
          withDependencies: {
-             $0.softwareUpdateClient.websiteURL = {
-                 guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
-                       let hostURL = URL(string: hostURLString)
-                 else { return URL(string: "https://www.whatsizemac.com")! }
-                 return hostURL
-             }
+         $0.softwareUpdateClient.websiteURL = {
+             guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
+                   let hostURL = URL(string: hostURLString)
+             else { return URL(string: "https://www.whatsizemac.com")! }
+             return hostURL
+         }
+         $0.softwareUpdateClient.appIconName = {
+             guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
+                   let hostURL = URL(string: hostURLString)
+             else { return URL(string: "https://www.whatsizemac.com")! }
+             return hostURL
+         }
          }
      )
      ```
      */
-    public var websiteURL: @Sendable (_ useTestServer: Bool) -> URL
+    public var websiteURL: @Sendable (_ useTestServer: Bool) -> URL = { _ in URL(string: "https://www.whatsizemac.com")! }
 
     // currently installed appNumber
-    public var appBuildNumber: @Sendable (_ optionPressed: Bool) -> Int
+    public var appBuildNumber: @Sendable (_ optionPressed: Bool) -> Int = { _ in 8090 }
 
     // currently installed short version
-    public var appShortVersion: @Sendable () -> String
+    public var appShortVersion: @Sendable () -> String = { "8.0.9" }
+
+    // return the proper image
+    public var appIconImage: @Sendable () -> NSImage = { NSImage() }
 
     // frequency in seconds to perform background updates, default is once an hour
-    public var backgroundFrequency: @Sendable (_ optionPressed: Bool) -> Int
+    public var backgroundFrequency: @Sendable (_ optionPressed: Bool) -> Int = { _ in 5 }
 
     // fetch the new update
-    public var checkForUpdates: @Sendable (_ useTestServer: Bool) async -> UpdateInfo?
+    public var checkForUpdates: @Sendable (_ useTestServer: Bool) async -> UpdateInfo? = { _ in return .none }
 
     // download the bytes for the new update
-    public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int>
+    public var downloadUpdate: @Sendable (_ update: UpdateInfo) throws -> AsyncStream<Int> = { _ in .finished }
 
     // install the update previosly downloaded
-    public var installUpgrade: @Sendable (_ pkgFilePath: String) async -> Void
-
-    public init(
-        websiteURL: @Sendable @escaping (_ useTestServer: Bool) -> URL,
-        appBuildNumber: @Sendable @escaping (_ optionPressed: Bool) -> Int,
-        appShortVersion: @Sendable @escaping () -> String,
-        backgroundFrequency: @Sendable @escaping (_ optionPressed: Bool) -> Int,
-        checkForUpdates: @Sendable @escaping (_ useTestServer: Bool) async -> UpdateInfo?,
-        downloadUpdate: @Sendable @escaping (_ update: UpdateInfo) throws -> AsyncStream<Int>,
-        installUpgrade: @Sendable @escaping (_ pkgFilePath: String) async -> Void
-    ) {
-        self.websiteURL = websiteURL
-        self.appBuildNumber = appBuildNumber
-        self.appShortVersion = appShortVersion
-        self.backgroundFrequency = backgroundFrequency
-        self.checkForUpdates = checkForUpdates
-        self.downloadUpdate = downloadUpdate
-        self.installUpgrade = installUpgrade
-    }
+    public var installUpgrade: @Sendable (_ pkgFilePath: String) async -> Void = { _ in }
 }
 
 extension DependencyValues {
@@ -110,6 +103,9 @@ extension SoftwareUpdateClient: DependencyKey {
             },
             appShortVersion: {
                 Bundle.main.appVersion.shortVersion
+            },
+            appIconImage: {
+                NSImage()
             },
             backgroundFrequency: { optionPressed in
                 var frequency = 60 * 60 // in seconds
@@ -229,6 +225,9 @@ extension SoftwareUpdateClient: DependencyKey {
             appShortVersion: {
                 "8.0.9"
             },
+            appIconImage: {
+                NSImage()
+            },
             backgroundFrequency: { _ in
                 5
             },
@@ -260,16 +259,4 @@ extension SoftwareUpdateClient: DependencyKey {
             }
         )
     }()
-}
-
-extension SoftwareUpdateClient: TestDependencyKey {
-    public static let testValue = Self(
-        websiteURL: unimplemented("\(Self.self).websiteURL", placeholder: .home),
-        appBuildNumber: unimplemented("\(Self.self).appBuildNumber", placeholder: 1010),
-        appShortVersion: unimplemented("\(Self.self).appShortVersion", placeholder: "1.0.1"),
-        backgroundFrequency: unimplemented("\(Self.self).backgroundFrequency", placeholder: 10),
-        checkForUpdates: unimplemented("\(Self.self).checkForUpdates", placeholder: .none),
-        downloadUpdate: unimplemented("\(Self.self).downloadUpdate"),
-        installUpgrade: unimplemented("\(Self.self).installUpgrade")
-    )
 }

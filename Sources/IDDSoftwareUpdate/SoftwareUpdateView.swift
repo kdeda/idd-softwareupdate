@@ -3,17 +3,19 @@
 //  idd-softwareupdate
 //
 //  Created by Klajd Deda on 4/3/24.
-//  Copyright (C) 1997-2025 id-design, inc. All rights reserved.
+//  Copyright (C) 1997-2026 id-design, inc. All rights reserved.
 //
 
 import Foundation
 import SwiftUI
+import Log4swift
 @preconcurrency import IDDSwiftUI
 import ComposableArchitecture
 import WebKit
 
 public struct SoftwareUpdateView: View {
     @Perception.Bindable var store: StoreOf<SoftwareUpdate>
+    @Dependency(\.softwareUpdateClient) var softwareUpdateClient
 
     fileprivate struct UpdatesView<Content>: View where Content: View {
         var title: String
@@ -234,9 +236,10 @@ public struct SoftwareUpdateView: View {
         WithPerceptionTracking {
             VStack(spacing: 10) {
                 HStack(alignment: .top, spacing: 20) {
-                    Image(nsImage: NSImage(named: "AppIcon") ?? NSImage())
+                    Image(nsImage: softwareUpdateClient.appIconImage())
                         .resizable()
                         .frame(width: 64, height: 64)
+                        // .border(.yellow)
 
                     switch store.installStep {
                     case .none:                    EmptyView()
@@ -296,9 +299,46 @@ public struct SoftwareUpdateView: View {
 }
 
 @MainActor
-fileprivate func store() -> StoreOf<SoftwareUpdate> {
+fileprivate func newStore() -> StoreOf<SoftwareUpdate> {
+    Log4swift.configureCompactSettings()
+    Log4swift.configure(fileLogConfig: .none)
+
+    prepareDependencies {
+        //        $0.softwareUpdateClient.websiteURL = { useTestServer in
+        //            guard let hostURLString = UserDefaults.standard.string(forKey: "AppDefaults.websiteURL"),
+        //                  let hostURL = URL(string: hostURLString)
+        //            else {
+        //                Log4swift["SoftwareUpdateView"].info(function: "websiteURL", "useTestServer: '\(useTestServer)'")
+        //                return URL(string: useTestServer ? "https://test.whatsizemac.com" : "https://www.whatsizemac.com")!
+        //            }
+        //            return hostURL
+        //        }
+        /**
+         Assumes whatsize8 is installed relative to us
+         ~/Developer/git.id-design.com/spm/whatsize8
+         ~/Developer/git.id-design.com/spm/idd-softwareupdate
+         */
+        $0.softwareUpdateClient.appIconImage = {
+            let fileURL = URL.init(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("whatsize8/WhatSize/AppIconOriginal.png")
+
+            Log4swift["SoftwareUpdateView"].info("fileURL: '\(fileURL.path)'")
+            let data = try? Data.init(contentsOf: fileURL)
+            return NSImage.init(data: data ?? Data()) ?? NSImage()
+        }
+    }
+
     var state = SoftwareUpdate.State()
 
+    state.useTestServer = true
+    /**
+     Comment uncomment the following to see
+     */
     state.installStep = .downloadUpdate
     state.installStep = .installAndRelaunch
     state.installStep = .installUpgradeCompleted
@@ -313,12 +353,28 @@ fileprivate func store() -> StoreOf<SoftwareUpdate> {
     )
 }
 
+/**
+ xcode 26.2 preview work on the mac
+ but here you will need to extra configure the dependency
+ */
 #Preview("SoftwareUpdateView - Light") {
-    SoftwareUpdateView(store: store())
+    let store = newStore()
+
+    return SoftwareUpdateView(store: store)
+        .onAppear(perform: {
+            Log4swift["SoftwareUpdateView"].info("onAppear")
+            store.send(.appDidStart)
+        })
         .preferredColorScheme(.light)
 }
 
 #Preview("SoftwareUpdateView - Dark") {
-    SoftwareUpdateView(store: store())
+    let store = newStore()
+
+    return SoftwareUpdateView(store: store)
+        .onAppear(perform: {
+            Log4swift["SoftwareUpdateView"].info("onAppear")
+            store.send(.appDidStart)
+        })
         .preferredColorScheme(.dark)
 }
