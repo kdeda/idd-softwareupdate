@@ -81,8 +81,9 @@ public struct SoftwareUpdateView: View {
                 .background(.white.opacity(0.8))
                 .border(.gray.opacity(0.4))
         }
-        .frame(minWidth: 540, idealWidth: 540)
-        .frame(minHeight: 320, idealHeight: 320)
+//        .frame(minWidth: 540, idealWidth: 540)
+//        .frame(minHeight: 320, idealHeight: 320)
+//        .frame(height: 420)
     }
 
     @ViewBuilder

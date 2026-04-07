@@ -9,7 +9,6 @@
 import Foundation
 import AppKit
 import ComposableArchitecture
-import IDDSwift
 import Log4swift
 import IDDAlert
 

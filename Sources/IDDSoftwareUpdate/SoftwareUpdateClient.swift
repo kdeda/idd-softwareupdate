@@ -8,7 +8,6 @@
 
 import Foundation
 import AppKit
-import IDDSwift
 import Log4swift
 import ComposableArchitecture
 import XCTestDynamicOverlay
