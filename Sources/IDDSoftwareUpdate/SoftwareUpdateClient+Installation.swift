@@ -126,6 +126,7 @@ extension SoftwareUpdateClient {
         // copy this executable binary in the temp
         let clonedHelperPathURL = tempRoot.appendingPathComponent(executableURL.lastPathComponent)
         do {
+            _ = FileManager.default.removeItemIfExist(at: clonedHelperPathURL)
             try FileManager.default.copyItem(at: executableURL, to: clonedHelperPathURL)
             Log4swift[Self.self].info(" clonedHelperPath: '\(clonedHelperPathURL.path)'")
 
@@ -175,7 +176,8 @@ extension SoftwareUpdateClient {
             // This will assure it to be disconnected from our installed locations
             // in that binary intercept the -executeInstallUpgrade path to run the executeInstallUpgrade
             //
-            try? await Task.sleep(for: .milliseconds(250))
+            // try? await Task.sleep(for: .milliseconds(250))
+            try? await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 250))
             let process = Process(URL(fileURLWithPath: clonedHelperPathURL.path), ["-executeInstallUpgrade", tempRoot.path])
 
             do {

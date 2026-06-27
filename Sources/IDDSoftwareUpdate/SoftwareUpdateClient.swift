@@ -115,9 +115,10 @@ extension SoftwareUpdateClient: DependencyKey {
                 return frequency
             },
             checkForUpdates: { useTestServer in
-                @Dependency(\.continuousClock) var clock
-                // DEDA DEBUG
-                try? await clock.sleep(for: .milliseconds(250))
+                //  // DEDA DEBUG
+                //  @Dependency(\.continuousClock) var clock
+                //  try? await clock.sleep(for: .milliseconds(250))
+                try? await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 250))
 
                 let updateURL = UpdateInfo.hostURL(useTestServer).appendingPathComponent("software/whatsize8/release/update.json")
                 Log4swift[Self.self].info(function: "checkForUpdates", "UpdateInfo.hostURL: '\(updateURL.absoluteString)'")
@@ -169,28 +170,42 @@ extension SoftwareUpdateClient: DependencyKey {
                                 // continuation.yield(.error(.failedToOpen(update.downloadPKGURL)))
                                 throw DownloadUpdateError.failedToOpen(update.downloadPKGURL)
                             }
+                            
+                            let fpsInMilliseconds: Double = 100 // emitt no more than each 100 ms
 
                             // download the binary and store it to the fileHandle
-                            let (asyncBytes, _) = try await URLSession.shared.bytes(from: downloadURL)
-                            var buffer = Data()
-                            var threshold = Date()
-
-                            for try await byte in asyncBytes {
-                                buffer.append(byte)
-
-                                if threshold.elapsedTimeInMilliseconds > 100 { // don't care but 10/second
+                            if #available(macOS 12.0, *) {
+                                let (asyncBytes, _) = try await URLSession.shared.bytes(from: downloadURL)
+                                var buffer = Data()
+                                var threshold = Date()
+                                
+                                for try await byte in asyncBytes {
+                                    buffer.append(byte)
+                                    
+                                    if threshold.elapsedTimeInMilliseconds > fpsInMilliseconds { // don't care but 10/second
+                                        fileHandle.write(buffer)
+                                        
+                                        // notify main thread about download progress
+                                        continuation.yield(buffer.count)
+                                        buffer = Data()
+                                        threshold = Date()
+                                    }
+                                }
+                                
+                                // write the last bits
+                                fileHandle.write(buffer)
+                                continuation.yield(buffer.count)
+                            } else {
+                                // Fallback for macOS 11 and earlier
+                                for await buffer in MacOS11Download().downloadUpdate(downloadURL) {
                                     fileHandle.write(buffer)
-
                                     // notify main thread about download progress
                                     continuation.yield(buffer.count)
-                                    buffer = Data()
-                                    threshold = Date()
                                 }
                             }
-
-                            // write the last bits
-                            fileHandle.write(buffer)
-                            continuation.yield(buffer.count)
+                            
+                            let fileSize = update.downloadPKGURL.logicalSize
+                            Log4swift[Self.self].error(function: "downloadUpdate", "wrote: '\(fileSize.decimalFormatted) bytes' to '\(update.downloadPKGURL.path)' from: '\(downloadURL.absoluteString)'")
                         } catch {
                             throw DownloadUpdateError.error(error.localizedDescription)
                         }
@@ -238,10 +253,11 @@ extension SoftwareUpdateClient: DependencyKey {
                     Log4swift[Self.self].info(function: "downloadUpdate", "update: '\(update)'")
 
                     let task = Task.detached {
-                        @Dependency(\.continuousClock) var clock
+                        // @Dependency(\.continuousClock) var clock
                         
                         await (0 ..< 100).asyncForEach { _ in
-                            try? await clock.sleep(for: .milliseconds(250))
+                            // try? await clock.sleep(for: .milliseconds(250))
+                            try? await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 250))
                             continuation.yield(100)
                         }
                         continuation.finish()
@@ -258,4 +274,6 @@ extension SoftwareUpdateClient: DependencyKey {
             }
         )
     }()
+    
+    public static let testValue = Self()
 }

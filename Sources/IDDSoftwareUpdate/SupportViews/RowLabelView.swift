@@ -26,7 +26,7 @@ internal struct RowLabelView<Content: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
             Text(label)
-                .fontWeight(.semibold)
+                .font(.body.weight(.semibold))
                 .foregroundColor(.secondary)
                 .frame(width: width, alignment: .trailing)
 

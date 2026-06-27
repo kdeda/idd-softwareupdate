@@ -93,8 +93,8 @@ public struct UpdateInfo: Equatable, Sendable {
     )
 
     public let buildNumber: Int
-    /// UTC Date
-    public let datePublished: Date
+    /// UTC Date, rounded to seconds
+    public private(set) var datePublished: Date
     public var downloadByteCount: Int
     public var downloadSHA256: String
     public var downloadURL: URL
@@ -118,7 +118,7 @@ public struct UpdateInfo: Equatable, Sendable {
          signature: String
     ) {
         self.buildNumber = buildNumber
-        self.datePublished = datePublished
+        self.datePublished = datePublished.truncatedToSecond
         self.downloadByteCount = downloadByteCount
         self.downloadSHA256 = downloadSHA256
         self.downloadURL = downloadURL
@@ -129,10 +129,19 @@ public struct UpdateInfo: Equatable, Sendable {
 
     init(jsonData: Data) throws {
         self = try Self.jsonDecoder.decode(UpdateInfo.self, from: jsonData)
+        self.datePublished = self.datePublished.truncatedToSecond
     }
 
     public var datePublishedString: String {
         Self.localDateFormatter.string(from: datePublished)
+    }
+    
+    /// debug helper, to remove subseconds from Date and allow a looser Equality
+    private func byRoundingDates() -> Self {
+        var copy = self
+        
+        copy.datePublished = self.datePublished.truncatedToSecond
+        return copy
     }
 
     /**
@@ -172,7 +181,7 @@ public struct UpdateInfo: Equatable, Sendable {
     }
 
     var downloadRootURL: URL {
-        URL.temporaryDirectory.appendingPathComponent("whatsize_update_\(self.buildNumber)")
+        FileManager.default.temporaryDirectory.appendingPathComponent("whatsize_update_\(self.buildNumber)")
     }
 
     var downloadPKGURL: URL {

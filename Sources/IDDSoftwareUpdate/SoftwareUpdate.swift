@@ -42,6 +42,7 @@ public struct SoftwareUpdate: Sendable {
         public var settings: Settings = Settings.lastSaved
         var useTestServer = false
         var optionPressed = false
+        var inFlightLoadingURL = true
 
         @Presents var alert: DNSAlert<Action.Alert>.State?
 
@@ -55,6 +56,7 @@ public struct SoftwareUpdate: Sendable {
         case checkForUpdates
         case cancelCheckForUpdates
         case checkForUpdatesDidEnd(UpdateInfo, isBackground: Bool)
+        case setInFlightLoadingURL(Bool)
 
         case skipThisVersion
         case remindMeLater
@@ -94,7 +96,6 @@ public struct SoftwareUpdate: Sendable {
         case downloadUpdate
     }
 
-    @Dependency(\.continuousClock) var clock
     @Dependency(\.softwareUpdateClient) var softwareUpdateClient
 
     public init() {
@@ -114,7 +115,7 @@ public struct SoftwareUpdate: Sendable {
         return .run { send in
             await send(.delegate(.completed))
             // hang on a tinny bit
-            try await clock.sleep(for: .milliseconds(50))
+            try await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 50))
             await NSApplication.shared.hide(nil)
 
             let pkgFilePath = UpdateInfo.installUpdateDebug
@@ -158,7 +159,7 @@ public struct SoftwareUpdate: Sendable {
                         // we will re-try in a bit
                         Log4swift[Self.self].error(".checkForUpdatesInBackgroundOnce handle failure to fetch: 'NOOP'")
                     }
-                    try await clock.sleep(for: .seconds(frequency)) // sleep for a bit and retry
+                    try await Task.sleep(nanoseconds: .nanoseconds(seconds: frequency)) // sleep for a bit and retry
                     await send(.checkForUpdatesInBackgroundOnce)
                 }
                 .cancellable(id: CancelID.checkForUpdatesInBackgroundOnce, cancelInFlight: true)
@@ -186,7 +187,7 @@ public struct SoftwareUpdate: Sendable {
                     return .run { send in
                         Task.cancel(id: CancelID.checkForUpdatesInBackgroundOnce)
                         await send(.delegate(.started))
-                        try await clock.sleep(for: .milliseconds(1250))
+                        try await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 1250))
                         await send(.installAndRelaunch)
                     }
                 }
@@ -195,11 +196,13 @@ public struct SoftwareUpdate: Sendable {
                 return .run { send in
                     Task.cancel(id: CancelID.checkForUpdatesInBackgroundOnce)
                     await send(.delegate(.started))
+                    try? await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 1250))
+                    
                     if let update = await softwareUpdateClient.checkForUpdates(useTestServer) {
                         await send(.checkForUpdatesDidEnd(update, isBackground: false))
                         return
                     }
-                    try await clock.sleep(for: .milliseconds(250))
+                    try await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 250))
                     await send(.delegate(.failedToFetchUpdate))
                 }
                 .cancellable(id: CancelID.checkingForUpdates, cancelInFlight: true)
@@ -228,6 +231,7 @@ public struct SoftwareUpdate: Sendable {
                         if state.settings.skipVersion >= update.buildNumber  {
                             Log4swift[Self.self].info(".checkForUpdatesDidEnd skipVersion: '\(state.settings.skipVersion)'")
                         } else {
+                            state.inFlightLoadingURL = true
                             state.installStep = .displayNewVersion // onto the next step
                             return .send(.delegate(.started)) // become visible
                         }
@@ -239,12 +243,17 @@ public struct SoftwareUpdate: Sendable {
 
                 // user initiated
                 if update.buildNumber > buildNumber {
+                    state.inFlightLoadingURL = true
                     state.installStep = .displayNewVersion // onto the next step
                     // we should already be visible
                     return .none
                 }
 
                 state.installStep = .uptoDate
+                return .none
+
+            case let .setInFlightLoadingURL(newValue):
+                state.inFlightLoadingURL = newValue
                 return .none
 
             case .skipThisVersion:
@@ -274,7 +283,8 @@ public struct SoftwareUpdate: Sendable {
                         for await byteCount in try softwareUpdateClient.downloadUpdate(update) {
                             await send(.downloading(byteCount))
                         }
-                        try await clock.sleep(for: .milliseconds(250)) // let it breathe a bit
+                        try await Task.sleep(nanoseconds: .nanoseconds(milliseconds: 250)) // let it breathe a bit
+
                         if !update.downloadPKGURL.fileExist {
                             Log4swift[Self.self].error(".downloadUpdate: failed to create: '\(update.downloadPKGURL.path)'")
                             await send(.delegate(.completed))
